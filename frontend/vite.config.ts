@@ -19,22 +19,22 @@ export default defineConfig({
       "/api" : {
         target: "http://backend:8080/",
         changeOrigin: true,
-        rewrite: (path: any) => path.replace(/^\/api/, "") 
-      } 
-      
+        rewrite: (path: any) => path.replace(/^\/api/, "")
+      }
+
     }
   },
   server: {
-    host: true,
-    port: 3000,
+    host: '0.0.0.0',
+    port: 3060,
     strictPort: true,
     proxy: {
       "/api" : {
-        target: "http://backend:8080/",
+        target: "http://localhost:8085/",
         changeOrigin: true,
-        rewrite: (path: any) => path.replace(/^\/api/, "") 
-      } 
-      
+        rewrite: (path: any) => path.replace(/^\/api/, "")
+      }
+
     }
   }
 })

@@ -1,5 +1,12 @@
 package main
 
+type Config struct {
+	TransmissionHost     string
+	TransmissionPort     string
+	TransmissionUsername string
+	TransmissionPassword string
+}
+
 type TransmissionRPC struct {
 	URL      string
 	Username string

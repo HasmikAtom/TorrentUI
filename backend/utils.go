@@ -6,8 +6,24 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
+
+func SetConfigs() *Config {
+	envPrefix := "DEV"
+	if _, err := os.Stat("/.dockerenv"); err == nil || os.Getenv("DOCKER_CONTAINER") == "true" {
+		// its running in docker
+		envPrefix = "PROD"
+	}
+
+	return &Config{
+		TransmissionHost:     os.Getenv(fmt.Sprintf("%s_TRANSMISSION_HOST", envPrefix)),
+		TransmissionPort:     os.Getenv(fmt.Sprintf("%s_TRANSMISSION_PORT", envPrefix)),
+		TransmissionUsername: os.Getenv(fmt.Sprintf("%s_TRANSMISSION_USERNAME", envPrefix)),
+		TransmissionPassword: os.Getenv(fmt.Sprintf("%s_TRANSMISSION_PASSWORD", envPrefix)),
+	}
+}
 
 func getStatusString(status int) string {
 	switch status {

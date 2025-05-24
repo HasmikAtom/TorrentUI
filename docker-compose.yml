@@ -7,10 +7,10 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     environment:
-      - TRANSMISSION_HOST=host.docker.internal
-      - TRANSMISSION_PORT=9091
-      - TRANSMISSION_USERNAME=${TRANSMISSION_USERNAME}
-      - TRANSMISSION_PASSWORD=${TRANSMISSION_PASSWORD}
+      - TRANSMISSION_HOST=${PROD_TRANSMISSION_HOST}
+      - TRANSMISSION_PORT=${PROD_TRANSMISSION_PORT}
+      - TRANSMISSION_USERNAME=${PROD_TRANSMISSION_USERNAME}
+      - TRANSMISSION_PASSWORD=${PROD_TRANSMISSION_PASSWORD}
     ports:
       - "8080:8080"
     extra_hosts:
@@ -23,7 +23,7 @@ services:
     container_name: frontend
     environment:
       - REACT_APP_API_URL=${REACT_APP_API_URL}
-    ports:  
+    ports:
       - "3000:3000"
     depends_on:
       - backend

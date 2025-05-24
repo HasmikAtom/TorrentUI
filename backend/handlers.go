@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"net/url"
+
 	"github.com/gin-gonic/gin"
+	"github.com/hasmikatom/torrent/scraper"
 )
 
 func handleDownload(c *gin.Context) {
@@ -103,7 +106,7 @@ func getTorrentStatus(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusNotFound, gin.H{"error": "Torrent not found"})
+	c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("Torrent not found => %s", err)})
 }
 
 func listTorrents(c *gin.Context) {
@@ -156,4 +159,38 @@ func listTorrents(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNotFound, gin.H{"error": "Torrent not found"})
+}
+
+func scrape(c *gin.Context) {
+	// baseurl := "https://thepiratebay.org"
+	name := c.Param("name")
+	// // name := c.Query("name")
+	// var torrentName = ""
+	// fmt.Sscanf(name, "%d", &torrentName)
+	// "https://thepiratebay.org/search.php?q=this+is+where+i+leave+you&all=on&search=Pirate+Search&page=0&orderby="
+
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "thepiratebay.org",
+		Path:   "/search.php",
+	}
+
+	q := u.Query()
+	q.Add("q", name)
+	q.Add("all", "on")
+	q.Add("search", "Pirate + Search")
+	q.Add("page", "0")
+	q.Add("orderby", "")
+
+	u.RawQuery = q.Encode()
+
+	gin.DefaultWriter.Write([]byte(u.String()))
+
+	// c.JSON(http.StatusOK, u.String())
+
+	results, err := scraper.Scrape(u.String())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Scraping didnt work: "})
+	}
+	c.JSON(http.StatusOK, results)
 }

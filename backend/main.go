@@ -3,32 +3,24 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
+var config *Config
 var client *TransmissionRPC
 
 func init() {
-	host := os.Getenv("TRANSMISSION_HOST")
-	if host == "" {
-		host = "host.docker.internal"
-	}
+	godotenv.Load()
 
-	port := os.Getenv("TRANSMISSION_PORT")
-	if port == "" {
-		port = "9091"
-	}
-
-	username := os.Getenv("TRANSMISSION_USERNAME")
-	password := os.Getenv("TRANSMISSION_PASSWORD")
+	c := SetConfigs()
 
 	client = &TransmissionRPC{
-		URL:      fmt.Sprintf("http://%s:%s/transmission/rpc", host, port),
-		Username: username,
-		Password: password,
+		URL:      fmt.Sprintf("http://%s:%s/transmission/rpc", c.TransmissionHost, c.TransmissionPort),
+		Username: c.TransmissionUsername,
+		Password: c.TransmissionPassword,
 	}
 }
 
@@ -53,6 +45,7 @@ func main() {
 	r.POST("/download", handleDownload)
 	r.GET("/status/:id", getTorrentStatus)
 	r.GET("/torrents", listTorrents)
+	r.POST("/scrape/:name", scrape)
 
-	r.Run(":8080")
+	r.Run(":8085")
 }
