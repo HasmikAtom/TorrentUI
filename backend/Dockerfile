@@ -1,6 +1,10 @@
-FROM golang:1.21-alpine
+FROM golang:1.23-alpine
 
 WORKDIR /app
+
+RUN apk add --no-cache \
+    chromium \
+    ca-certificates
 
 COPY go.mod go.sum ./
 RUN go mod download

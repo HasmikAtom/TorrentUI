@@ -18,6 +18,7 @@ func SetConfigs() *Config {
 	}
 
 	return &Config{
+		AppPort:              os.Getenv(fmt.Sprintf("%s_APP_PORT", envPrefix)),
 		TransmissionHost:     os.Getenv(fmt.Sprintf("%s_TRANSMISSION_HOST", envPrefix)),
 		TransmissionPort:     os.Getenv(fmt.Sprintf("%s_TRANSMISSION_PORT", envPrefix)),
 		TransmissionUsername: os.Getenv(fmt.Sprintf("%s_TRANSMISSION_USERNAME", envPrefix)),

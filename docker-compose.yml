@@ -12,7 +12,7 @@ services:
       - TRANSMISSION_USERNAME=${PROD_TRANSMISSION_USERNAME}
       - TRANSMISSION_PASSWORD=${PROD_TRANSMISSION_PASSWORD}
     ports:
-      - "8080:8080"
+      - "${PROD_APP_PORT}:${PROD_APP_PORT}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

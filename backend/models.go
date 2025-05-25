@@ -1,6 +1,7 @@
 package main
 
 type Config struct {
+	AppPort              string
 	TransmissionHost     string
 	TransmissionPort     string
 	TransmissionUsername string

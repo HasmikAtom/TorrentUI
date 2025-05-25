@@ -162,12 +162,7 @@ func listTorrents(c *gin.Context) {
 }
 
 func scrape(c *gin.Context) {
-	// baseurl := "https://thepiratebay.org"
 	name := c.Param("name")
-	// // name := c.Query("name")
-	// var torrentName = ""
-	// fmt.Sscanf(name, "%d", &torrentName)
-	// "https://thepiratebay.org/search.php?q=this+is+where+i+leave+you&all=on&search=Pirate+Search&page=0&orderby="
 
 	u := &url.URL{
 		Scheme: "https",
@@ -186,11 +181,9 @@ func scrape(c *gin.Context) {
 
 	gin.DefaultWriter.Write([]byte(u.String()))
 
-	// c.JSON(http.StatusOK, u.String())
-
 	results, err := scraper.Scrape(u.String())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Scraping didnt work: "})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Scraping didnt work: %v", err.Error())})
 	}
 	c.JSON(http.StatusOK, results)
 }

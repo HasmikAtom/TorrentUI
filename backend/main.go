@@ -9,13 +9,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var config *Config
+var c *Config
 var client *TransmissionRPC
 
 func init() {
 	godotenv.Load()
 
-	c := SetConfigs()
+	c = SetConfigs()
 
 	client = &TransmissionRPC{
 		URL:      fmt.Sprintf("http://%s:%s/transmission/rpc", c.TransmissionHost, c.TransmissionPort),
@@ -47,5 +47,5 @@ func main() {
 	r.GET("/torrents", listTorrents)
 	r.POST("/scrape/:name", scrape)
 
-	r.Run(":8085")
+	r.Run(":" + c.AppPort)
 }
