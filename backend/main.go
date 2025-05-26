@@ -45,7 +45,10 @@ func main() {
 	r.POST("/download", handleDownload)
 	r.GET("/status/:id", getTorrentStatus)
 	r.GET("/torrents", listTorrents)
-	r.POST("/scrape/:name", scrape)
+
+	r.POST("/scrape/piratebay/:name", scrapePirateBay)
+	r.POST("/scrape/rutracker/:name", scrapeRuTracker)
+	r.POST("/download/file/:torrentFileUrl", ruTrackerFileDownload)
 
 	r.Run(":" + c.AppPort)
 }

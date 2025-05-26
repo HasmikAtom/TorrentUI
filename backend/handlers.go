@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"net/url"
@@ -161,7 +162,7 @@ func listTorrents(c *gin.Context) {
 	c.JSON(http.StatusNotFound, gin.H{"error": "Torrent not found"})
 }
 
-func scrape(c *gin.Context) {
+func scrapePirateBay(c *gin.Context) {
 	name := c.Param("name")
 
 	u := &url.URL{
@@ -181,9 +182,103 @@ func scrape(c *gin.Context) {
 
 	gin.DefaultWriter.Write([]byte(u.String()))
 
-	results, err := scraper.Scrape(u.String())
+	results, err := scraper.ScrapePirateBay(u.String())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Scraping didnt work: %v", err.Error())})
 	}
 	c.JSON(http.StatusOK, results)
 }
+
+func scrapeRuTracker(c *gin.Context) {
+	name := c.Param("name")
+
+	log.Println(name)
+
+	u := &url.URL{
+		Scheme: "https",
+		Host:   "rutracker.org",
+		Path:   "/forum/index.php",
+	}
+
+	log.Println(u.String())
+	results, err := scraper.ScrapeRuTracker(u.String(), name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Scraping didnt work: %v", err.Error())})
+	}
+	c.JSON(http.StatusOK, results)
+}
+
+func ruTrackerFileDownload(c *gin.Context) {
+	// url := c.Param("torrentFileUrl")
+
+	// downloadTorrentFile(url)
+	// torrentData, err := downloadTorrentFile(url)
+	// if err != nil {
+	// 	log.Printf("failed to download torrent file: %w", err)
+	// }
+
+	return
+}
+
+// func downloadTorrentFile(url string) ([]byte, error) {
+// 	req, err := http.NewRequest("GET", url, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Add common headers to mimic a browser request
+// 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+// 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+
+// 	resp, err := t.client.Do(req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer resp.Body.Close()
+
+// 	if resp.StatusCode != http.StatusOK {
+// 		return nil, fmt.Errorf("failed to download torrent file: HTTP %d", resp.StatusCode)
+// 	}
+
+// 	data, err := io.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return data, nil
+// }
+
+// func (t *TransmissionRPCClient) addTorrentToTransmission(torrentData []byte, downloadDir ...string) error {
+// 	// Encode torrent data to base64
+// 	encodedTorrent := base64.StdEncoding.EncodeToString(torrentData)
+
+// 	// Prepare arguments
+// 	args := map[string]interface{}{
+// 		"metainfo": encodedTorrent,
+// 	}
+
+// 	// Add download directory if specified
+// 	if len(downloadDir) > 0 && downloadDir[0] != "" {
+// 		args["download-dir"] = downloadDir[0]
+// 	}
+
+// 	// Create RPC request
+// 	request := TransmissionRequest{
+// 		Method:    "torrent-add",
+// 		Arguments: args,
+// 		Tag:       1,
+// 	}
+
+// 	// Send request
+// 	response, err := t.sendRPCRequest(request)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	if response.Result != "success" {
+// 		return fmt.Errorf("transmission RPC error: %s", response.Result)
+// 	}
+
+// 	fmt.Println("Torrent added successfully to Transmission")
+// 	return nil
+// }

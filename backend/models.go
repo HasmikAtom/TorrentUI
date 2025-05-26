@@ -6,6 +6,10 @@ type Config struct {
 	TransmissionPort     string
 	TransmissionUsername string
 	TransmissionPassword string
+	RutrackerUrl         string
+	ThepiratebayURL      string
+	RutrackerUsername    string
+	RutrackerPassword    string
 }
 
 type TransmissionRPC struct {
