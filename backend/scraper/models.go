@@ -23,4 +23,5 @@ type RutrackerTorrent struct {
 	Le          string `json:"le"`
 	Downloads   string `json:"downloads"`
 	DateAdded   string `json:"dateAdded"`
+	MagnetLink  string `json:"magnetLink"`
 }

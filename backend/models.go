@@ -12,25 +12,6 @@ type Config struct {
 	RutrackerPassword    string
 }
 
-type TransmissionRPC struct {
-	URL      string
-	Username string
-	Password string
-	Session  string
-}
-
-type RPCRequest struct {
-	Method    string      `json:"method"`
-	Arguments interface{} `json:"arguments"`
-	Tag       int         `json:"tag"`
-}
-
-type RPCResponse struct {
-	Result    string                 `json:"result"`
-	Arguments map[string]interface{} `json:"arguments"`
-	Tag       int                    `json:"tag"`
-}
-
 type TorrentStatus struct {
 	ID           int     `json:"id"`
 	Name         string  `json:"name"`
