@@ -21,7 +21,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path: any) => path.replace(/^\/api/, "")
       }
-
     }
   },
   server: {
@@ -34,7 +33,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path: any) => path.replace(/^\/api/, "")
       }
-
     }
   }
 })

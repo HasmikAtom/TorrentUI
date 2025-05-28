@@ -23,16 +23,13 @@ func handleFileDownload(c *gin.Context) {
 
 	var req Request
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
-	}
+	req.URL = c.PostForm("url")
+	req.MediaType = c.PostForm("contentType")
 
 	fileURL := req.URL
-	log.Println("downloading ", fileURL, "as a ", req.MediaType)
 
 	if req.URL == "" || req.MediaType == "" {
-		c.JSON(400, gin.H{"error": "url or mediaType required"})
+		c.JSON(400, gin.H{"error": "url or contentType required"})
 		return
 	}
 

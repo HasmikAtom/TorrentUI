@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RotateCw, Search, Delete } from 'lucide-react';
-import { FoundTorrents} from './Models';
+import { FoundRuTorrents} from './Models';
 import {
   Table,
   TableBody,
@@ -30,7 +30,7 @@ export const RuTrackerScrapeResults: React.FC<ScrapeResultsProps> = ({ switchTab
     const [mediaTypeSelected, setMediaTypeSelected] = useState<boolean>(false);
     const [selectedTorrent, setSelectedTorrent] = useState<string>("");
     const [torrentName, setTorrentName] = useState<string>("");
-    const [foundTorrents, setFoundTorrents] = useState<FoundTorrents[] | null>(null);
+    const [foundTorrents, setFoundTorrents] = useState<FoundRuTorrents[] | null>(null);
     const [contentType, setContentType] = useState<string>('Movie');
 
 
@@ -73,12 +73,11 @@ export const RuTrackerScrapeResults: React.FC<ScrapeResultsProps> = ({ switchTab
     const getVisibleColumns = () => {
         if (!foundTorrents || foundTorrents.length === 0) return [];
         return Object.keys(foundTorrents[0]).filter(
-        key => key !== "magnet" && key !== "torrent_link"
+        key => key !== "magnetLink" && key !== "downloadURL" && key !== "id"
         );
     };
 
     const selectTorrent = (mediaType: string, selectedMagnet: string) => {
-      // console.log("Selected stuff ===> ", mediaType, selectedMagnet)
       setMediaTypeSelected(true);
 
 
@@ -86,18 +85,17 @@ export const RuTrackerScrapeResults: React.FC<ScrapeResultsProps> = ({ switchTab
       setSelectedTorrent(selectedMagnet)
     }
 
-    const handleTorrentDownload = async () => {
-      // console.log("MEDIA TYPE AND MAGNET LINK ===> ", contentType, selectedTorrent)
+    const handleRuTorrentDownload = async () => {
       setDownloadLoading(true);
 
       try {
         const formData = new FormData();
         if (selectedTorrent) {
-          formData.append('magnetLink', selectedTorrent);
+          formData.append('url', selectedTorrent);
         }
         formData.append('contentType', contentType);
 
-        const response = await fetch('/api/download', {
+        const response = await fetch('/api/download/file', {
           method: 'POST',
           body: formData,
         });
@@ -119,11 +117,6 @@ export const RuTrackerScrapeResults: React.FC<ScrapeResultsProps> = ({ switchTab
       switchTab("download");
       // setMediaType("")
     }
-
-    // const onClose = (e:any) => {
-    //   console.log("on open close", e)
-    //   setContentType("")
-    // }
 
     return (
         <Card className="w-full max-w-2xl mx-auto mt-8">
@@ -173,9 +166,9 @@ export const RuTrackerScrapeResults: React.FC<ScrapeResultsProps> = ({ switchTab
                 </TableHeader>
                 <TableBody>
                   {foundTorrents && foundTorrents.map((torrent) => (
-                    <TableRow key={torrent.torrent_link} className="hover:bg-slate-100">
+                    <TableRow key={torrent.downloadURL} className="hover:bg-slate-100">
                       {Object.entries(torrent).map(([key, value], i) => {
-                        if (key === "magnet" || key === "torrent_link") return null;
+                        if (key === "magnetLink" || key === "downloadURL" || key === "id") return null;
 
                         return (
                           <TableCell key={`${i}-${key}`}>
@@ -213,7 +206,7 @@ export const RuTrackerScrapeResults: React.FC<ScrapeResultsProps> = ({ switchTab
                                 <div className="grid flex-1 gap-2">
                                   <RadioGroup
                                     value={contentType}
-                                    onValueChange={(selected) => selectTorrent(selected, torrent.magnet)}
+                                    onValueChange={(selected) => selectTorrent(selected, torrent.downloadURL)}
                                     className="flex justify-between mb-4"
                                   >
                                     <div className="flex items-center space-x-2">
@@ -235,7 +228,7 @@ export const RuTrackerScrapeResults: React.FC<ScrapeResultsProps> = ({ switchTab
                                 <DialogClose asChild>
                                   <Button
                                     disabled={!mediaTypeSelected}
-                                    onClick={handleTorrentDownload}
+                                    onClick={handleRuTorrentDownload}
                                     >
                                     <Download />
                                     Download
