@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   backend:
+    restart: always
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -17,6 +18,7 @@ services:
       - "host.docker.internal:host-gateway"
 
   frontend:
+    restart: always
     build:
       context: ./frontend
       dockerfile: Dockerfile
