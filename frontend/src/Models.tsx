@@ -6,27 +6,31 @@ export interface TorrentStatus {
 }
 
 export interface FoundTorrents {
+  id:          string;
   title:       string;
-  magnet:      string;
-  upload_date:  string;
-  size:        string;
-  seeders:     number;
-  leechers:    number;
   category:    string;
   uploader:    string;
-  torrent_link: string;
+  size:        string;
+  upload_date:  string;
+  se:     number;
+  le:    number;
+  description_url: string;
+  
+  magnet:      string;
 }
 
 export interface FoundRuTorrents {
-  author: string;
+  id:          string;
+  title:       string;
   category:    string;
-  dateAdded: string;
+  uploader:    string;
+  size:        string;
+  upload_date:  string;
+  se:     number;
+  le:    number;
+  description_url: string;
+  
   downloadURL: string;
+  
   downloads: string;
-  id: string;
-  le: string;
-  se: string;
-  magnetLink: string;
-  size: string;
-  title: string
 }

@@ -101,15 +101,18 @@ func ScrapeRuTracker(url string, torrentName string) ([]RutrackerTorrent, error)
 				const cells = row.cells;
 				return {
 					id: row.id.replace('trs-tr-', ''),
-					category: cells[2]?.querySelector('.f-name a')?.textContent?.trim() || '',
 					title: cells[3]?.querySelector('.t-title a')?.textContent?.trim() || '',
-					author: cells[4]?.querySelector('.u-name a')?.textContent?.trim() || '',
+					category: cells[2]?.querySelector('.f-name a')?.textContent?.trim() || '',
+					uploader: cells[4]?.querySelector('.u-name a')?.textContent?.trim() || '',
 					size: cells[5]?.querySelector('a')?.textContent?.trim() || '',
-					downloadURL: cells[5]?.querySelector('a')?.href || '',
+					upload_date: cells[9]?.querySelector('p')?.textContent?.trim() || '',
 					se: cells[6]?.textContent?.trim() || '',
 					le: cells[7]?.textContent?.trim() || '',
+					description_url: cells[3]?.querySelector('.t-title a')?.href || '',
+
+					download_url: cells[5]?.querySelector('a')?.href || '',
+					
 					downloads: cells[8]?.textContent?.trim() || '',
-					dateAdded: cells[9]?.querySelector('p')?.textContent?.trim() || '',
 				};
 			})
 		`, &results),
