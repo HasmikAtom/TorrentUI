@@ -5,7 +5,7 @@ export interface TorrentStatus {
   status: string;
 }
 
-export interface FoundTorrents {
+export interface ScrapedTorrents {
   id:          string;
   title:       string;
   category:    string;
@@ -16,21 +16,8 @@ export interface FoundTorrents {
   le:    number;
   description_url: string;
   
-  magnet:      string;
-}
+  magnet:      string; // for piratebay
+  download_url: string; // for rutracker
 
-export interface FoundRuTorrents {
-  id:          string;
-  title:       string;
-  category:    string;
-  uploader:    string;
-  size:        string;
-  upload_date:  string;
-  se:     number;
-  le:    number;
-  description_url: string;
-  
-  downloadURL: string;
-  
   downloads: string;
 }
