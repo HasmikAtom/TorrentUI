@@ -36,8 +36,6 @@ func handleFileDownload(c *gin.Context) {
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 
-	defer cancel()
-
 	RutrackerLogin(ctx, fileURL)
 
 	n, err := downloadFile(ctx, req.URL, torrentFileSaveLocation)
@@ -46,9 +44,8 @@ func handleFileDownload(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	torrentLocation := filepath.Join(torrentFileSaveLocation, n)
 
-	log.Println("transmission is about to receive the file ===>", torrentLocation)
+	torrentLocation := filepath.Join(torrentFileSaveLocation, n)
 
 	torrentData, err := os.ReadFile(torrentLocation)
 	if err != nil {
