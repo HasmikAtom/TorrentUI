@@ -33,6 +33,11 @@ export const ScrapeSearch: React.FC<props> = ({
             placeholder="Enter torrent name..."
             value={torrentName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTorrentName(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter' && !searchLoading && torrentName.trim()) {
+                handleTorrentSearch();
+              }
+            }}
             className="flex-1"
           />
         </div>
