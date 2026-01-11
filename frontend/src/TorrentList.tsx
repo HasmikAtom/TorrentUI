@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
+import { Button } from "./components/ui/button";
+import { RefreshCw } from "lucide-react";
 import { TorrentStatus } from "./Models";
 
+interface props {
+  refreshTrigger?: number;
+}
 
-
-export const TorrentList: React.FC = () => {
+export const TorrentList: React.FC<props> = ({ refreshTrigger }) => {
     const [torrents, setTorrents] = useState<TorrentStatus[] | null>(null);
-  
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
     const fetchTorrents = async () => {
       try {
         const response = await fetch(`/api/torrents`);
@@ -18,15 +23,40 @@ export const TorrentList: React.FC = () => {
         console.error('Error fetching torrents:', error);
       }
     };
-  
+
+    const handleManualRefresh = async () => {
+      setIsRefreshing(true);
+      await fetchTorrents();
+      setIsRefreshing(false);
+    };
+
     useEffect(() => {
       fetchTorrents();
+      const interval = setInterval(fetchTorrents, 3000);
+      return () => clearInterval(interval);
     }, []);
-  
+
+    useEffect(() => {
+      if (refreshTrigger !== undefined) {
+        fetchTorrents();
+      }
+    }, [refreshTrigger]);
+
     return (
       <Card className="w-full max-w-2xl mx-auto mt-8">
         <CardHeader>
-          <CardTitle>Active Torrents</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Active Torrents</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {torrents && torrents.length > 0 ? (
@@ -49,10 +79,10 @@ export const TorrentList: React.FC = () => {
                     <span className="font-medium">Status:</span>
                     <span>{torrent.status}</span>
                   </div>
-                  
+
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
                       style={{ width: `${torrent.percentDone}%` }}
                     />
                   </div>
@@ -66,5 +96,3 @@ export const TorrentList: React.FC = () => {
       </Card>
     );
   };
-  
-  
