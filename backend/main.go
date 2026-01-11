@@ -31,7 +31,11 @@ func init() {
 		},
 	}
 
-	s = scraper.InitScraper()
+	if err := scraper.GetPool().Init(); err != nil {
+		log.Printf("Warning: Failed to initialize browser pool: %v", err)
+	}
+
+	// s = scraper.InitScraper()
 }
 
 func main() {

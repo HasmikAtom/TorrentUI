@@ -9,10 +9,7 @@ import (
 )
 
 func ScrapePirateBay(url string) ([]PirateBayTorrent, error) {
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
-
-	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel := GetPool().NewTabContext(60 * time.Second)
 	defer cancel()
 
 	var torrents []PirateBayTorrent

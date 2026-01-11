@@ -9,10 +9,7 @@ import (
 )
 
 func ScrapeRuTracker(url string, torrentName string) ([]RutrackerTorrent, error) {
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
-
-	ctx, cancel = context.WithTimeout(ctx, 120*time.Second)
+	ctx, cancel := GetPool().NewTabContext(120 * time.Second)
 	defer cancel()
 
 	var results []RutrackerTorrent
