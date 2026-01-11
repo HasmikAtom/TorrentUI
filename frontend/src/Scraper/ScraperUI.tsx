@@ -3,24 +3,21 @@ import { ScrapedTorrents } from '../Models';
 import { ScrapeSearch } from './ScrapeSearch';
 import { ScrapedTorrentsCards } from './ScrapedTorrents';
 
-
-
 const ScraperConfig = {
   thepiratebay: {
     scrapeEndpoint: '/api/scrape/piratebay/',
-    downloadEndpoint: '/api/download',
-    downloadKey: 'magnetLink',
+    downloadEndpoint: '/api/download/batch',
+    downloadKey: 'magnetLinks',
     downloadSource: 'magnet' as const,
   },
   rutracker: {
     scrapeEndpoint: '/api/scrape/rutracker/',
-    downloadEndpoint: '/api/download/file',
-    downloadKey: 'url',
+    downloadEndpoint: '/api/download/file/batch',
+    downloadKey: 'urls',
     downloadSource: 'download_url' as const,
   }
 } as const
 
-// TODO: do this the proper way, create a type for the piratebay and rutracker config
 export type DownloadSource = typeof ScraperConfig[keyof typeof ScraperConfig]['downloadSource'];
 
 interface props {
@@ -28,19 +25,16 @@ interface props {
   switchTab: (tabValue: string) => void;
 }
 
-export const ScraperUI: React.FC<props> = ({ 
+export const ScraperUI: React.FC<props> = ({
   type,
   switchTab,
 }) => {
-  
+
     const [searchLoading, setSearchLoading] = useState<boolean>(false);
-    const [_, setDownloadLoading] = useState<boolean>(false);
-    const [mediaTypeSelected, setMediaTypeSelected] = useState<boolean>(false);
-    const [selectedTorrent, setSelectedTorrent] = useState<string>("");
+    const [downloading, setDownloading] = useState<boolean>(false);
     const [torrentName, setTorrentName] = useState<string>("");
     const [foundTorrents, setFoundTorrents] = useState<ScrapedTorrents[] | null>(null);
-    const [contentType, setContentType] = useState<string>('Movie');
-  
+    const [selectedTorrents, setSelectedTorrents] = useState<Map<string, string>>(new Map());
 
     const config = ScraperConfig[type];
     const downloadSource = config.downloadSource;
@@ -68,23 +62,28 @@ export const ScraperUI: React.FC<props> = ({
         setSearchLoading(false);
     }
 
-    const handleScrapeDownload = async () => {
-      setDownloadLoading(true);
+    // Unified download handler - works for both single and batch downloads
+    const handleDownload = async (downloadUrls: string[], mediaType: string) => {
+      if (downloadUrls.length === 0) return;
+
+      setDownloading(true);
       try {
-        const formData = new FormData();
-        if (selectedTorrent) {
-          formData.append(config.downloadKey, selectedTorrent);
-        }
-        formData.append('contentType', contentType);
+        const body = {
+          [config.downloadKey]: downloadUrls,
+          contentType: mediaType,
+        };
 
         const response = await fetch(config.downloadEndpoint, {
           method: 'POST',
-          body: formData,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
         });
 
         const data = await response.json();
         if (response.ok) {
-          console.log(data)
+          console.log('Download started:', data);
         } else {
           console.error('Download failed:', data.error);
         }
@@ -92,27 +91,56 @@ export const ScraperUI: React.FC<props> = ({
         console.error('Error:', error);
       }
 
-      setDownloadLoading(false);
-
-      // wait a few seconds before switching the tab
+      setDownloading(false);
+      clearSelection();
       switchTab("download");
-      // setMediaType("")
-    }
-    
+    };
 
-      const handleTorrentSearchClear = async () => {
+    // Single torrent download (from individual Download button)
+    const handleSingleDownload = async (downloadUrl: string, mediaType: string) => {
+      await handleDownload([downloadUrl], mediaType);
+    };
+
+    // Batch download (from Download Selected button)
+    const handleBatchDownload = async (mediaType: string) => {
+      const downloadUrls = Array.from(selectedTorrents.values());
+      await handleDownload(downloadUrls, mediaType);
+    };
+
+    const handleTorrentSearchClear = async () => {
       setSearchLoading(false);
       setFoundTorrents(null);
       setTorrentName("");
+      setSelectedTorrents(new Map());
     }
-  
-    const selectTorrent = (mediaType: string, selectedMagnet: string) => {
-      console.log("selecting torrent", selectedMagnet)
-      setMediaTypeSelected(true);
-      setContentType(mediaType)
-      setSelectedTorrent(selectedMagnet)
-    }
-  
+
+    const toggleTorrentSelection = (id: string, downloadUrl: string) => {
+      setSelectedTorrents(prev => {
+        const newMap = new Map(prev);
+        if (newMap.has(id)) {
+          newMap.delete(id);
+        } else {
+          newMap.set(id, downloadUrl);
+        }
+        return newMap;
+      });
+    };
+
+    const selectAllTorrents = () => {
+      if (!foundTorrents) return;
+      const newMap = new Map<string, string>();
+      foundTorrents.forEach(torrent => {
+        const downloadUrl = torrent[downloadSource] || '';
+        if (downloadUrl) {
+          newMap.set(torrent.id, downloadUrl);
+        }
+      });
+      setSelectedTorrents(newMap);
+    };
+
+    const clearSelection = () => {
+      setSelectedTorrents(new Map());
+    };
 
   return (
     <>
@@ -126,12 +154,14 @@ export const ScraperUI: React.FC<props> = ({
 
       <ScrapedTorrentsCards
         foundTorrents={foundTorrents}
-        contentType={contentType}
-        mediaTypeSelected={mediaTypeSelected}
         downloadSource={downloadSource}
-        setContentType={setContentType}
-        selectTorrent={selectTorrent}
-        handleTorrentDownload={handleScrapeDownload}
+        handleSingleDownload={handleSingleDownload}
+        selectedTorrents={selectedTorrents}
+        onToggleSelection={toggleTorrentSelection}
+        onSelectAll={selectAllTorrents}
+        onClearSelection={clearSelection}
+        onBatchDownload={handleBatchDownload}
+        downloading={downloading}
       />
     </>
   );

@@ -66,6 +66,68 @@ func handleDownload(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get torrent ID"})
 }
 
+type BatchDownloadRequest struct {
+	MagnetLinks []string `json:"magnetLinks"`
+	ContentType string   `json:"contentType"`
+}
+
+type BatchDownloadResponse struct {
+	TorrentIds []int    `json:"torrentIds"`
+	Errors     []string `json:"errors,omitempty"`
+}
+
+func handleBatchDownload(c *gin.Context) {
+	var req BatchDownloadRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if len(req.MagnetLinks) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "At least one magnet link is required"})
+		return
+	}
+
+	if req.ContentType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "contentType is required"})
+		return
+	}
+
+	var torrentIds []int
+	var errors []string
+
+	for _, magnetLink := range req.MagnetLinks {
+		args := map[string]interface{}{
+			"filename":     magnetLink,
+			"download-dir": "/mediastorage/" + req.ContentType,
+		}
+
+		result, err := client.SendRequest("torrent-add", args)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to add torrent: %v", err))
+			continue
+		}
+
+		if result.Result != "success" {
+			errors = append(errors, "Failed to add torrent: unsuccessful result")
+			continue
+		}
+
+		if torrentAdded, ok := result.Arguments["torrent-added"].(map[string]interface{}); ok {
+			if id, ok := torrentAdded["id"].(float64); ok {
+				torrentIds = append(torrentIds, int(id))
+			}
+		}
+	}
+
+	response := BatchDownloadResponse{
+		TorrentIds: torrentIds,
+		Errors:     errors,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func getTorrentStatus(c *gin.Context) {
 	id := c.Param("id")
 	var torrentId int

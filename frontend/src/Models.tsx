@@ -15,9 +15,14 @@ export interface ScrapedTorrents {
   se:     number;
   le:    number;
   description_url: string;
-  
+
   magnet:      string; // for piratebay
   download_url: string; // for rutracker
 
   downloads: string;
+}
+
+export interface SelectedTorrent {
+  id: string;
+  downloadUrl: string; // magnet for PirateBay, download_url for RuTracker
 }

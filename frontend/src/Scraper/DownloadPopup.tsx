@@ -1,38 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-
 import { Download } from 'lucide-react';
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@radix-ui/react-label';
 import { DialogHeader, DialogFooter } from '../components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
-import { ScrapedTorrents } from '../Models';
-import { DownloadSource } from './ScraperUI';
-
 
 interface props {
-  contentType: string;
-  torrent: ScrapedTorrents,
-  mediaTypeSelected?: boolean;
-  downloadSource: DownloadSource;
-  setContentType: (type: string) => void;
-  selectTorrent: (type: string, downloadUrl: string) => void;
-  handleDownload?: () => Promise<void>;
+  downloadUrl: string;
+  handleDownload: (downloadUrl: string, mediaType: string) => Promise<void>;
+  downloading: boolean;
 }
 
-
 export const TDownloadPopup: React.FC<props> = ({
-  contentType,
-  torrent,
-  downloadSource,
-  mediaTypeSelected,
-  setContentType,
-  selectTorrent,
+  downloadUrl,
   handleDownload,
+  downloading,
 }) => {
+  const [mediaType, setMediaType] = useState<string>('');
+
+  const onDownload = async () => {
+    if (mediaType && downloadUrl) {
+      await handleDownload(downloadUrl, mediaType);
+    }
+  };
 
   return (
-    <Dialog onOpenChange={() => setContentType("")}>
+    <Dialog onOpenChange={() => setMediaType('')}>
       <DialogTrigger asChild>
         <Button
           size="lg"
@@ -46,13 +40,14 @@ export const TDownloadPopup: React.FC<props> = ({
         <DialogHeader>
           <DialogTitle>Select Media Type</DialogTitle>
           <DialogDescription>
+            Choose where to save this torrent
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center space-x-2">
           <div className="grid flex-1 gap-2">
             <RadioGroup
-              value={contentType}
-              onValueChange={(selected) => selectTorrent(selected, torrent[downloadSource])}
+              value={mediaType}
+              onValueChange={setMediaType}
               className="flex justify-between mb-4"
             >
               <div className="flex items-center space-x-2">
@@ -73,11 +68,11 @@ export const TDownloadPopup: React.FC<props> = ({
         <DialogFooter className="sm:justify-start">
           <DialogClose asChild>
             <Button
-              disabled={!mediaTypeSelected}
-              onClick={handleDownload}
+              disabled={!mediaType || downloading}
+              onClick={onDownload}
             >
               <Download />
-              Download
+              {downloading ? 'Downloading...' : 'Download'}
             </Button>
           </DialogClose>
         </DialogFooter>

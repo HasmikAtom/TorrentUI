@@ -58,6 +58,8 @@ func main() {
 
 	r.POST("/download", handleDownload)
 	r.POST("/download/file", handleFileDownload)
+	r.POST("/download/batch", handleBatchDownload)
+	r.POST("/download/file/batch", handleBatchFileDownload)
 	r.GET("/status/:id", getTorrentStatus)
 	r.GET("/torrents", listTorrents)
 
