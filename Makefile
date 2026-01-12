@@ -2,41 +2,44 @@
 
 # Development
 dev:
-	docker-compose -f docker-compose.dev.yml up
+	docker compose -p torrent-dev -f docker-compose.dev.yml up
 
 dev-build:
-	docker compose -f docker-compose.dev.yml up --build
+	docker compose -p torrent-dev -f docker-compose.dev.yml up --build
+
+dev-build-deploy:
+	docker compose -p torrent-dev -f docker-compose.dev.yml up -d --build
 
 dev-down:
-	docker-compose -f docker-compose.dev.yml down
+	docker compose -p torrent-dev -f docker-compose.dev.yml down
 
 dev-logs:
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker compose -p torrent-dev -f docker-compose.dev.yml logs -f
 
 dev-restart:
-	docker-compose -f docker-compose.dev.yml restart
+	docker compose -p torrent-dev -f docker-compose.dev.yml restart
 
 # Production
-prod:
-	docker-compose -f docker-compose.yml up -d
+prod-deploy:
+	docker compose -p torrent-prod -f docker-compose.yml up -d
 
-prod-build:
-	docker-compose -f docker-compose.yml up -d --build
+prod-build-deploy:
+	docker compose -p torrent-prod -f docker-compose.yml up -d --build
 
 prod-down:
-	docker-compose -f docker-compose.yml down
+	docker compose -p torrent-prod -f docker-compose.yml down
 
 prod-logs:
-	docker-compose -f docker-compose.yml logs -f
+	docker compose -p torrent-prod -f docker-compose.yml logs -f
 
 prod-restart:
-	docker-compose -f docker-compose.yml restart
+	docker compose -p torrent-prod -f docker-compose.yml restart
 
 # Cleanup
 clean-dev:
-	docker-compose -f docker-compose.dev.yml down -v --rmi all --remove-orphans
+	docker compose -p torrent-dev -f docker-compose.dev.yml down -v --rmi all --remove-orphans
 	-docker rmi torrent-project-frontend-dev torrent-project-backend-dev 2>/dev/null
 
 clean-prod:
-	docker-compose -f docker-compose.yml down -v --rmi all --remove-orphans
+	docker compose -p torrent-prod -f docker-compose.yml down -v --rmi all --remove-orphans
 	-docker rmi torrent-project-frontend torrent-project-backend 2>/dev/null
