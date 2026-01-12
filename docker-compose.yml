@@ -6,7 +6,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: torrent-backend
+    container_name: torrent-backend-prod
     environment:
       - TRANSMISSION_HOST=${PROD_TRANSMISSION_HOST}
       - TRANSMISSION_PORT=${PROD_TRANSMISSION_PORT}
@@ -22,7 +22,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: torrent-frontend
+    container_name: torrent-frontend-prod
     environment:
       - REACT_APP_API_URL=${REACT_APP_API_URL}
     ports:

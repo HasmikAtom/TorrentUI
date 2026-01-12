@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrapedTorrents } from '../Models';
 import { ScrapeSearch } from './ScrapeSearch';
 import { ScrapedTorrentsCards } from './ScrapedTorrents';
+import { useToast } from '@/hooks/use-toast';
 
 const ScraperConfig = {
   thepiratebay: {
@@ -20,12 +21,12 @@ const ScraperConfig = {
 
 export type DownloadSource = typeof ScraperConfig[keyof typeof ScraperConfig]['downloadSource'];
 
-interface props {
+interface Props {
   type: keyof typeof ScraperConfig
   switchTab: (tabValue: string) => void;
 }
 
-export const ScraperUI: React.FC<props> = ({
+export const ScraperUI: React.FC<Props> = ({
   type,
   switchTab,
 }) => {
@@ -35,6 +36,7 @@ export const ScraperUI: React.FC<props> = ({
     const [torrentName, setTorrentName] = useState<string>("");
     const [foundTorrents, setFoundTorrents] = useState<ScrapedTorrents[] | null>(null);
     const [selectedTorrents, setSelectedTorrents] = useState<Map<string, string>>(new Map());
+    const { toast } = useToast();
 
     const config = ScraperConfig[type];
     const downloadSource = config.downloadSource;
@@ -49,15 +51,22 @@ export const ScraperUI: React.FC<props> = ({
 
             const data = await response.json();
             if(response.ok) {
-                console.log(data)
                 setFoundTorrents(data)
             } else {
-                console.error("Search Failed", data.Error)
+                toast({
+                  variant: "destructive",
+                  title: "Search failed",
+                  description: data.Error || 'Unknown error',
+                });
             }
 
         }
         catch(error) {
-            console.error("Error", error)
+            toast({
+              variant: "destructive",
+              title: "Network error",
+              description: "Unable to connect to server",
+            });
         }
         setSearchLoading(false);
     }
@@ -83,17 +92,28 @@ export const ScraperUI: React.FC<props> = ({
 
         const data = await response.json();
         if (response.ok) {
-          console.log('Download started:', data);
+          toast({
+            title: "Download started",
+            description: `${downloadUrls.length} torrent(s) added to queue`,
+          });
+          clearSelection();
+          switchTab("download");
         } else {
-          console.error('Download failed:', data.error);
+          toast({
+            variant: "destructive",
+            title: "Download failed",
+            description: data.error || 'Unknown error',
+          });
         }
       } catch (error) {
-        console.error('Error:', error);
+        toast({
+          variant: "destructive",
+          title: "Network error",
+          description: "Unable to start download",
+        });
       }
 
       setDownloading(false);
-      clearSelection();
-      switchTab("download");
     };
 
     // Single torrent download (from individual Download button)

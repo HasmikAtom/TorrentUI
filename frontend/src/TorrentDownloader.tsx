@@ -5,18 +5,42 @@ import { Button } from '@/components/ui/button';
 import { Download, RotateCw, FileUp } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useToast } from '@/hooks/use-toast';
 
-interface props {
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+
+interface Props {
   onDownloadComplete?: () => void;
 }
 
-export const TorrentDownloader: React.FC<props> = ({ onDownloadComplete }) => {
+export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
   const [magnetLink, setMagnetLink] = useState<string>('');
   const [torrentFile, setTorrentFile] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [contentType, setContentType] = useState<string>('Movie');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const validateFile = (file: File): boolean => {
+    if (!file.name.endsWith('.torrent')) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please select a .torrent file",
+      });
+      return false;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Torrent file must be less than 1MB",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleDownload = async () => {
     setLoading(true);
@@ -51,7 +75,10 @@ export const TorrentDownloader: React.FC<props> = ({ onDownloadComplete }) => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setTorrentFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (validateFile(file)) {
+        setTorrentFile(file);
+      }
     }
   };
 
@@ -68,8 +95,11 @@ export const TorrentDownloader: React.FC<props> = ({ onDownloadComplete }) => {
     e.preventDefault();
     setIsDragOver(false);
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].name.endsWith('.torrent')) {
-      setTorrentFile(files[0]);
+    if (files.length > 0) {
+      const file = files[0];
+      if (validateFile(file)) {
+        setTorrentFile(file);
+      }
     }
   };
 

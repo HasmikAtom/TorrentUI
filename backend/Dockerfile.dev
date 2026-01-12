@@ -1,0 +1,17 @@
+FROM golang:1.23-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache \
+    chromium \
+    ca-certificates
+
+# Install air for hot reload (v1.61.7 is last version supporting Go 1.23)
+RUN go install github.com/air-verse/air@v1.61.7
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+EXPOSE 8080
+
+CMD ["air", "-c", ".air.toml"]

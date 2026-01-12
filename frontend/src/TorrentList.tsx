@@ -1,18 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { TorrentStatus } from "./Models";
 
-interface props {
+const POLL_INTERVAL = 3000;
+
+interface Props {
   refreshTrigger?: number;
 }
 
-export const TorrentList: React.FC<props> = ({ refreshTrigger }) => {
+export const TorrentList: React.FC<Props> = ({ refreshTrigger }) => {
     const [torrents, setTorrents] = useState<TorrentStatus[] | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const intervalRef = useRef<number | null>(null);
 
-    const fetchTorrents = async () => {
+    const fetchTorrents = useCallback(async () => {
       try {
         const response = await fetch(`/api/torrents`);
         const data = await response.json();
@@ -22,7 +25,7 @@ export const TorrentList: React.FC<props> = ({ refreshTrigger }) => {
       } catch (error) {
         console.error('Error fetching torrents:', error);
       }
-    };
+    }, []);
 
     const handleManualRefresh = async () => {
       setIsRefreshing(true);
@@ -30,17 +33,46 @@ export const TorrentList: React.FC<props> = ({ refreshTrigger }) => {
       setIsRefreshing(false);
     };
 
+    const startPolling = useCallback(() => {
+      if (intervalRef.current === null) {
+        intervalRef.current = window.setInterval(fetchTorrents, POLL_INTERVAL);
+      }
+    }, [fetchTorrents]);
+
+    const stopPolling = useCallback(() => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }, []);
+
+    // Initial fetch and polling with Page Visibility API
     useEffect(() => {
       fetchTorrents();
-      const interval = setInterval(fetchTorrents, 3000);
-      return () => clearInterval(interval);
-    }, []);
+      startPolling();
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          stopPolling();
+        } else {
+          fetchTorrents(); // Refresh immediately when tab becomes visible
+          startPolling();
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        stopPolling();
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }, [fetchTorrents, startPolling, stopPolling]);
 
     useEffect(() => {
       if (refreshTrigger !== undefined) {
         fetchTorrents();
       }
-    }, [refreshTrigger]);
+    }, [refreshTrigger, fetchTorrents]);
 
     return (
       <Card className="w-full max-w-2xl mx-auto mt-8">

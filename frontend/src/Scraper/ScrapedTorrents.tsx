@@ -7,7 +7,7 @@ import { BatchDownloadPopup } from './BatchDownloadPopup';
 import { ScrapedTorrents } from '../Models';
 import { DownloadSource } from './ScraperUI';
 
-interface props {
+interface Props {
   foundTorrents: ScrapedTorrents[] | null;
   downloadSource: DownloadSource;
   handleSingleDownload: (downloadUrl: string, mediaType: string) => Promise<void>;
@@ -19,7 +19,7 @@ interface props {
   downloading: boolean;
 }
 
-export const ScrapedTorrentsCards: React.FC<props> = ({
+export const ScrapedTorrentsCards: React.FC<Props> = ({
   foundTorrents,
   downloadSource,
   handleSingleDownload,
@@ -83,9 +83,11 @@ export const ScrapedTorrentsCards: React.FC<props> = ({
                       <div className="flex items-start gap-3">
                         <input
                           type="checkbox"
+                          id={`torrent-${torrent.id}`}
                           checked={isSelected}
                           onChange={() => onToggleSelection(torrent.id, downloadUrl)}
                           className="mt-1 h-4 w-4 rounded border-gray-300 cursor-pointer"
+                          aria-label={`Select ${torrent.title}`}
                         />
                         <div className="flex-1 space-y-2">
                           <div className="flex justify-between truncate">

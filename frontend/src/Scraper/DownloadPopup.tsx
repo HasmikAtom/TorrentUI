@@ -2,17 +2,16 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { Label } from '@radix-ui/react-label';
 import { DialogHeader, DialogFooter } from '../components/ui/dialog';
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
+import { MediaTypeSelector } from './MediaTypeSelector';
 
-interface props {
+interface Props {
   downloadUrl: string;
   handleDownload: (downloadUrl: string, mediaType: string) => Promise<void>;
   downloading: boolean;
 }
 
-export const TDownloadPopup: React.FC<props> = ({
+export const TDownloadPopup: React.FC<Props> = ({
   downloadUrl,
   handleDownload,
   downloading,
@@ -43,28 +42,7 @@ export const TDownloadPopup: React.FC<props> = ({
             Choose where to save this torrent
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-center space-x-2">
-          <div className="grid flex-1 gap-2">
-            <RadioGroup
-              value={mediaType}
-              onValueChange={setMediaType}
-              className="flex justify-between mb-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Movies" id="movie" />
-                <Label htmlFor="movie">Movie</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Series" id="series" />
-                <Label htmlFor="series">Series</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Music" id="music" />
-                <Label htmlFor="music">Music</Label>
-              </div>
-            </RadioGroup>
-          </div>
-        </div>
+        <MediaTypeSelector value={mediaType} onValueChange={setMediaType} />
         <DialogFooter className="sm:justify-start">
           <DialogClose asChild>
             <Button

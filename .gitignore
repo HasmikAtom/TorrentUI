@@ -12,6 +12,7 @@ node_modules
 dist
 build
 .next
+backend/tmp/
 
 # Logs
 logs
