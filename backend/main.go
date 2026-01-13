@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -15,7 +19,6 @@ import (
 
 var c *Config
 var client *transmission.TransmissionRPC
-var s *scraper.Scraper
 
 func init() {
 	godotenv.Load()
@@ -34,8 +37,6 @@ func init() {
 	if err := scraper.GetPool().Init(); err != nil {
 		log.Printf("Warning: Failed to initialize browser pool: %v", err)
 	}
-
-	// s = scraper.InitScraper()
 }
 
 func main() {
@@ -48,12 +49,9 @@ func main() {
 
 	r.Use(cors.New(config))
 
-	r.Use(func(c *gin.Context) {
-		log.Printf("[DEBUG] Request Headers:")
-		for name, values := range c.Request.Header {
-			log.Printf("[DEBUG] %s: %s", name, values)
-		}
-		c.Next()
+	// Health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	r.POST("/download", handleDownload)
@@ -66,5 +64,38 @@ func main() {
 	r.POST("/scrape/piratebay/:name", scrapePirateBay)
 	r.POST("/scrape/rutracker/:name", scrapeRuTracker)
 
-	r.Run(":" + c.AppPort)
+	// Create server with graceful shutdown
+	srv := &http.Server{
+		Addr:    ":" + c.AppPort,
+		Handler: r,
+	}
+
+	// Start server in goroutine
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	log.Printf("Server started on port %s", c.AppPort)
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	// Shutdown browser pool
+	scraper.GetPool().Shutdown()
+
+	// Give outstanding requests 5 seconds to complete
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server exited")
 }

@@ -11,13 +11,13 @@ type TransmissionRPC struct {
 }
 
 type RPCRequest struct {
-	Method    string      `json:"method"`
-	Arguments interface{} `json:"arguments"`
-	Tag       int         `json:"tag"`
+	Method    string `json:"method"`
+	Arguments any    `json:"arguments"`
+	Tag       int    `json:"tag"`
 }
 
 type RPCResponse struct {
-	Result    string                 `json:"result"`
-	Arguments map[string]interface{} `json:"arguments"`
-	Tag       int                    `json:"tag"`
+	Result    string         `json:"result"`
+	Arguments map[string]any `json:"arguments"`
+	Tag       int            `json:"tag"`
 }

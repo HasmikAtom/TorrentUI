@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
-
-	"net/url"
 
 	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/chromedp"
@@ -26,20 +26,34 @@ func handleDownload(c *gin.Context) {
 		return
 	}
 
+	// Validate mediaType to prevent path traversal
+	downloadDir, err := GetDownloadDir(mediaType)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var filename string
+	var isTempFile bool
 	if torrentFile != nil {
 		filename = fmt.Sprintf("/tmp/%s", torrentFile.Filename)
 		if err := c.SaveUploadedFile(torrentFile, filename); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save torrent file"})
 			return
 		}
+		isTempFile = true
+		defer func() {
+			if isTempFile {
+				os.Remove(filename)
+			}
+		}()
 	} else {
 		filename = magnetLink
 	}
 
 	args := map[string]interface{}{
 		"filename":     filename,
-		"download-dir": "/mediastorage/" + mediaType,
+		"download-dir": downloadDir,
 	}
 
 	result, err := client.SendRequest("torrent-add", args)
@@ -93,13 +107,20 @@ func handleBatchDownload(c *gin.Context) {
 		return
 	}
 
+	// Validate contentType to prevent path traversal
+	downloadDir, err := GetDownloadDir(req.ContentType)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var torrentIds []int
 	var errors []string
 
 	for _, magnetLink := range req.MagnetLinks {
 		args := map[string]interface{}{
 			"filename":     magnetLink,
-			"download-dir": "/mediastorage/" + req.ContentType,
+			"download-dir": downloadDir,
 		}
 
 		result, err := client.SendRequest("torrent-add", args)
@@ -154,27 +175,17 @@ func getTorrentStatus(c *gin.Context) {
 
 	if torrents, ok := result.Arguments["torrents"].([]interface{}); ok && len(torrents) > 0 {
 		if torrent, ok := torrents[0].(map[string]interface{}); ok {
-			status := TorrentStatus{
-				ID:           int(torrent["id"].(float64)),
-				Name:         torrent["name"].(string),
-				PercentDone:  torrent["percentDone"].(float64) * 100,
-				RateDownload: int64(torrent["rateDownload"].(float64)),
-				Status:       getStatusString(int(torrent["status"].(float64))),
+			status, ok := ParseTorrentStatus(torrent)
+			if !ok {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse torrent data"})
+				return
 			}
-
-			if errVal, ok := torrent["error"]; ok {
-				status.Error = int(errVal.(float64))
-			}
-			if errStr, ok := torrent["errorString"]; ok {
-				status.ErrorString = errStr.(string)
-			}
-
 			c.JSON(http.StatusOK, status)
 			return
 		}
 	}
 
-	c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("Torrent not found => %s", err)})
+	c.JSON(http.StatusNotFound, gin.H{"error": "Torrent not found"})
 }
 
 func listTorrents(c *gin.Context) {
@@ -201,32 +212,16 @@ func listTorrents(c *gin.Context) {
 	}
 	statuses := []TorrentStatus{}
 	if torrents, ok := result.Arguments["torrents"].([]interface{}); ok && len(torrents) > 0 {
-		for i := 0; i < len(torrents); i++ {
-			if torrent, ok := torrents[i].(map[string]interface{}); ok {
-				status := TorrentStatus{
-					ID:           int(torrent["id"].(float64)),
-					Name:         torrent["name"].(string),
-					PercentDone:  torrent["percentDone"].(float64) * 100,
-					RateDownload: int64(torrent["rateDownload"].(float64)),
-					Status:       getStatusString(int(torrent["status"].(float64))),
+		for _, t := range torrents {
+			if torrent, ok := t.(map[string]interface{}); ok {
+				if status, ok := ParseTorrentStatus(torrent); ok {
+					statuses = append(statuses, status)
 				}
-
-				if errVal, ok := torrent["error"]; ok {
-					status.Error = int(errVal.(float64))
-				}
-				if errStr, ok := torrent["errorString"]; ok {
-					status.ErrorString = errStr.(string)
-				}
-
-				statuses = append(statuses, status)
 			}
 		}
-
-		c.JSON(http.StatusOK, statuses)
-		return
 	}
 
-	c.JSON(http.StatusNotFound, gin.H{"error": "Torrent not found"})
+	c.JSON(http.StatusOK, statuses)
 }
 
 func scrapePirateBay(c *gin.Context) {
@@ -256,8 +251,8 @@ func scrapePirateBay(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-func scrapeRuTracker(c *gin.Context) {
-	name := c.Param("name")
+func scrapeRuTracker(ctx *gin.Context) {
+	name := ctx.Param("name")
 
 	log.Println(name)
 
@@ -267,12 +262,18 @@ func scrapeRuTracker(c *gin.Context) {
 		Path:   "/forum/index.php",
 	}
 
-	log.Println(u.String())
-	results, err := scraper.ScrapeRuTracker(u.String(), name)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Scraping didnt work: %v", err.Error())})
+	creds := scraper.RutrackerCredentials{
+		Username: c.RutrackerUsername,
+		Password: c.RutrackerPassword,
 	}
-	c.JSON(http.StatusOK, results)
+
+	log.Println(u.String())
+	results, err := scraper.ScrapeRuTracker(u.String(), name, creds)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Scraping didnt work: %v", err.Error())})
+		return
+	}
+	ctx.JSON(http.StatusOK, results)
 }
 
 func downloadFile(ctx context.Context, downloadURL string, downloadLocation string) (string, error) {

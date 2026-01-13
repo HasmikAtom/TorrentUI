@@ -1,17 +1,15 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
+	"github.com/hasmikatom/torrent/scraper"
 )
 
 type Request struct {
@@ -19,61 +17,79 @@ type Request struct {
 	MediaType string `json:"mediaType"`
 }
 
-func handleFileDownload(c *gin.Context) {
+func handleFileDownload(gc *gin.Context) {
 	torrentFileSaveLocation := "/mediastorage/torrent-files"
 
 	var req Request
 
-	req.URL = c.PostForm("url")
-	req.MediaType = c.PostForm("contentType")
+	req.URL = gc.PostForm("url")
+	req.MediaType = gc.PostForm("contentType")
 
 	fileURL := req.URL
 
 	if req.URL == "" || req.MediaType == "" {
-		c.JSON(400, gin.H{"error": "url or contentType required"})
+		gc.JSON(http.StatusBadRequest, gin.H{"error": "url or contentType required"})
 		return
 	}
 
-	ctx, cancel := chromedp.NewContext(context.Background())
+	// Validate mediaType to prevent path traversal
+	downloadDir, err := GetDownloadDir(req.MediaType)
+	if err != nil {
+		gc.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Use browser pool for better resource management
+	ctx, cancel := scraper.GetPool().NewTabContext(120 * time.Second)
 	defer cancel()
 
-	RutrackerLogin(ctx, fileURL)
+	creds := scraper.RutrackerCredentials{
+		Username: c.RutrackerUsername,
+		Password: c.RutrackerPassword,
+	}
+	if err := scraper.RutrackerLogin(ctx, fileURL, creds); err != nil {
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
+		return
+	}
 
 	n, err := downloadFile(ctx, req.URL, torrentFileSaveLocation)
 	if err != nil {
 		log.Println("error downloading file ===> ", err)
-		c.JSON(500, gin.H{"error": err.Error()})
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to download torrent file"})
 		return
 	}
 
 	torrentLocation := filepath.Join(torrentFileSaveLocation, n)
+	defer os.Remove(torrentLocation) // Clean up downloaded torrent file
 
 	torrentData, err := os.ReadFile(torrentLocation)
 	if err != nil {
 		log.Printf("failed to read torrent file: %v", err)
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read torrent file"})
+		return
 	}
 
 	base64Data := base64.StdEncoding.EncodeToString(torrentData)
 
 	args := map[string]interface{}{
-		"download-dir": "/mediastorage/" + req.MediaType,
+		"download-dir": downloadDir,
 		"metainfo":     base64Data,
 	}
 	result, err := client.SendRequest("torrent-add", args)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add torrent"})
 		return
 	}
 
 	if result.Result != "success" {
 		log.Println("arguments ==> ", result.Arguments)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add torrent"})
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add torrent"})
 		return
 	}
 
 	if torrentAdded, ok := result.Arguments["torrent-added"].(map[string]interface{}); ok {
 		if id, ok := torrentAdded["id"].(float64); ok {
-			c.JSON(http.StatusOK, gin.H{
+			gc.JSON(http.StatusOK, gin.H{
 				"message":   "Download started",
 				"torrentId": int(id),
 			})
@@ -81,7 +97,7 @@ func handleFileDownload(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get torrent ID"})
+	gc.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get torrent ID"})
 }
 
 type BatchFileDownloadRequest struct {
@@ -94,31 +110,44 @@ type BatchFileDownloadResponse struct {
 	Errors     []string `json:"errors,omitempty"`
 }
 
-func handleBatchFileDownload(c *gin.Context) {
+func handleBatchFileDownload(gc *gin.Context) {
 	torrentFileSaveLocation := "/mediastorage/torrent-files"
 
 	var req BatchFileDownloadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "Invalid request body"})
+	if err := gc.ShouldBindJSON(&req); err != nil {
+		gc.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	if len(req.URLs) == 0 {
-		c.JSON(400, gin.H{"error": "At least one URL is required"})
+		gc.JSON(http.StatusBadRequest, gin.H{"error": "At least one URL is required"})
 		return
 	}
 
 	if req.ContentType == "" {
-		c.JSON(400, gin.H{"error": "contentType is required"})
+		gc.JSON(http.StatusBadRequest, gin.H{"error": "contentType is required"})
 		return
 	}
 
-	ctx, cancel := chromedp.NewContext(context.Background())
+	// Validate contentType to prevent path traversal
+	downloadDir, err := GetDownloadDir(req.ContentType)
+	if err != nil {
+		gc.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Use browser pool for better resource management
+	ctx, cancel := scraper.GetPool().NewTabContext(180 * time.Second)
 	defer cancel()
 
+	creds := scraper.RutrackerCredentials{
+		Username: c.RutrackerUsername,
+		Password: c.RutrackerPassword,
+	}
+
 	// Login once using the first URL
-	if err := RutrackerLogin(ctx, req.URLs[0]); err != nil {
-		c.JSON(500, gin.H{"error": "Failed to login to RuTracker"})
+	if err := scraper.RutrackerLogin(ctx, req.URLs[0], creds); err != nil {
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login to RuTracker"})
 		return
 	}
 
@@ -129,29 +158,32 @@ func handleBatchFileDownload(c *gin.Context) {
 		filename, err := downloadFile(ctx, fileURL, torrentFileSaveLocation)
 		if err != nil {
 			log.Printf("Error downloading file %s: %v", fileURL, err)
-			errors = append(errors, fmt.Sprintf("Failed to download: %v", err))
+			errors = append(errors, "Failed to download file")
 			continue
 		}
 
 		torrentLocation := filepath.Join(torrentFileSaveLocation, filename)
 
 		torrentData, err := os.ReadFile(torrentLocation)
+		// Clean up downloaded file regardless of success
+		os.Remove(torrentLocation)
+
 		if err != nil {
 			log.Printf("Failed to read torrent file: %v", err)
-			errors = append(errors, fmt.Sprintf("Failed to read torrent file: %v", err))
+			errors = append(errors, "Failed to read torrent file")
 			continue
 		}
 
 		base64Data := base64.StdEncoding.EncodeToString(torrentData)
 
 		args := map[string]interface{}{
-			"download-dir": "/mediastorage/" + req.ContentType,
+			"download-dir": downloadDir,
 			"metainfo":     base64Data,
 		}
 
 		result, err := client.SendRequest("torrent-add", args)
 		if err != nil {
-			errors = append(errors, fmt.Sprintf("Failed to add torrent: %v", err))
+			errors = append(errors, "Failed to add torrent")
 			continue
 		}
 
@@ -172,73 +204,6 @@ func handleBatchFileDownload(c *gin.Context) {
 		Errors:     errors,
 	}
 
-	c.JSON(200, response)
+	gc.JSON(http.StatusOK, response)
 }
 
-func RutrackerLogin(ctx context.Context, url string) error {
-
-	err := chromedp.Run(ctx,
-		chromedp.Navigate(url),
-		chromedp.WaitVisible(`body`, chromedp.ByQuery),
-
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("Extracting data...")
-			return nil
-		}),
-
-		chromedp.WaitVisible(`a[onclick*="BB.toggle_top_login"]`, chromedp.ByQuery),
-		chromedp.Sleep(1*time.Second),
-
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("Login button visible...")
-			return nil
-		}),
-
-		chromedp.Click(`//b[contains(text(), "Вход")]/parent::a`, chromedp.BySearch),
-
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("Login button clicked...")
-			return nil
-		}),
-
-		chromedp.WaitEnabled(`#top-login-uname`, chromedp.ByQuery),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("Login fields available...")
-			return nil
-		}),
-		chromedp.SendKeys(`#top-login-uname`, "HasmikAtom", chromedp.ByQuery),
-		chromedp.SendKeys(`#top-login-pwd`, "57666777", chromedp.ByQuery),
-
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("Login credentials filled...")
-			return nil
-		}),
-
-		chromedp.Click(`#top-login-btn`, chromedp.ByQuery),
-
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("Login button clicked...")
-			return nil
-		}),
-
-		chromedp.Sleep(3*time.Second),
-
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("waiting for the search bar and button...")
-			return nil
-		}),
-
-		chromedp.WaitVisible(`#search-text`, chromedp.ByQuery),
-
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			log.Println("search button visible... all set for downloading torrent file...")
-			return nil
-		}),
-	)
-
-	if err != nil {
-		log.Println("something happened while logging in ==> ", err)
-	}
-
-	return nil
-}
