@@ -6,6 +6,20 @@ export default {
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
     theme: {
         extend: {
+            keyframes: {
+                'slide-from-right': {
+                    '0%': { transform: 'translateX(30px)', opacity: '0' },
+                    '100%': { transform: 'translateX(0)', opacity: '1' },
+                },
+                'slide-from-left': {
+                    '0%': { transform: 'translateX(-30px)', opacity: '0' },
+                    '100%': { transform: 'translateX(0)', opacity: '1' },
+                },
+            },
+            animation: {
+                'slide-from-right': 'slide-from-right 0.3s ease-out',
+                'slide-from-left': 'slide-from-left 0.3s ease-out',
+            },
             borderRadius: {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
