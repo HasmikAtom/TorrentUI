@@ -7,6 +7,7 @@ import { ScraperUI } from "./Scraper/ScraperUI"
 import { Toaster } from "@/components/ui/toaster"
 import { Download, Skull, Compass } from "lucide-react"
 import { ThemeToggle } from "./components/ThemeToggle"
+import Logo from "./assets/herxagon-logo.svg"
 
 const TAB_ORDER = ["download", "thepiratebay", "rutracker"] as const;
 type TabName = typeof TAB_ORDER[number];
@@ -47,8 +48,13 @@ const TorrentUI: React.FC = () => {
 
   return (
     <>
+      <header className="flex items-center justify-between px-6 py-4 border-b">
+        <img src={Logo} alt="Logo" className="h-12 dark:invert" />
+        <ThemeToggle />
+      </header>
+
       <TabsPrimitive.Root value={activeTab} onValueChange={handleTabChange} className='pt-[20px]'>
-        <div className="flex items-center justify-center gap-4 mb-2">
+        <div className="flex items-center justify-center mb-2">
           <TabsList className="grid w-[400px] grid-cols-3">
             <TabsTrigger className='data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-2' value="download">
               <Download className="w-4 h-4" />
@@ -63,7 +69,6 @@ const TorrentUI: React.FC = () => {
               Rutracker
             </TabsTrigger>
           </TabsList>
-          <ThemeToggle />
         </div>
 
         <div className="overflow-hidden">
