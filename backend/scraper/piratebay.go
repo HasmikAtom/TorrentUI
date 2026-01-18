@@ -9,7 +9,11 @@ import (
 )
 
 func ScrapePirateBay(url string) ([]PirateBayTorrent, error) {
-	ctx, cancel := GetPool().NewTabContext(60 * time.Second)
+	return ScrapePirateBayWithTimeout(url, 60*time.Second)
+}
+
+func ScrapePirateBayWithTimeout(url string, timeout time.Duration) ([]PirateBayTorrent, error) {
+	ctx, cancel := GetPool().NewTabContext(timeout)
 	defer cancel()
 
 	var torrents []PirateBayTorrent

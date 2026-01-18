@@ -1,4 +1,5 @@
 export interface TorrentStatus {
+  id: number;
   name: string;
   percentDone: number;
   rateDownload: number;

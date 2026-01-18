@@ -37,6 +37,9 @@ func init() {
 	if err := scraper.GetPool().Init(); err != nil {
 		log.Printf("Warning: Failed to initialize browser pool: %v", err)
 	}
+
+	// Load scraper config
+	scraper.LoadScraperConfig()
 }
 
 func main() {
@@ -60,9 +63,15 @@ func main() {
 	r.POST("/download/file/batch", handleBatchFileDownload)
 	r.GET("/status/:id", getTorrentStatus)
 	r.GET("/torrents", listTorrents)
+	r.DELETE("/torrents/:id", deleteTorrent)
 
 	r.POST("/scrape/piratebay/:name", scrapePirateBay)
 	r.POST("/scrape/rutracker/:name", scrapeRuTracker)
+
+	// SSE endpoints for real-time scrape progress
+	r.GET("/scrape/piratebay/:name/stream", scrapePirateBaySSE)
+	r.GET("/scrape/rutracker/:name/stream", scrapeRuTrackerSSE)
+	r.GET("/scrape/sources", getScraperSources)
 
 	// Create server with graceful shutdown
 	srv := &http.Server{

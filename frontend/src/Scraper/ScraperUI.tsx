@@ -7,17 +7,27 @@ import { useToast } from '@/hooks/use-toast';
 const ScraperConfig = {
   thepiratebay: {
     scrapeEndpoint: '/api/scrape/piratebay/',
+    scrapeStreamEndpoint: '/api/scrape/piratebay/',
     downloadEndpoint: '/api/download/batch',
     downloadKey: 'magnetLinks',
     downloadSource: 'magnet' as const,
   },
   rutracker: {
     scrapeEndpoint: '/api/scrape/rutracker/',
+    scrapeStreamEndpoint: '/api/scrape/rutracker/',
     downloadEndpoint: '/api/download/file/batch',
     downloadKey: 'urls',
     downloadSource: 'download_url' as const,
   }
 } as const
+
+interface SSEEvent {
+  type: 'trying' | 'success' | 'error' | 'complete';
+  message: string;
+  host?: string;
+  label?: string;
+  data?: any;
+}
 
 export type DownloadSource = typeof ScraperConfig[keyof typeof ScraperConfig]['downloadSource'];
 
@@ -43,32 +53,72 @@ export const ScraperUI: React.FC<Props> = ({
 
     const handleScrapeSearch = async () => {
       setSearchLoading(true);
+      setFoundTorrents(null);
 
+      // Use SSE for real-time progress updates
+      const streamUrl = `${config.scrapeStreamEndpoint}${encodeURIComponent(torrentName)}/stream`;
+      const eventSource = new EventSource(streamUrl);
+
+      eventSource.onmessage = (event) => {
         try {
-            const response = await fetch(`${config.scrapeEndpoint}${torrentName}`, {
-                method: "POST",
-            });
+          const data: SSEEvent = JSON.parse(event.data);
 
-            const data = await response.json();
-            if(response.ok) {
-                setFoundTorrents(data)
-            } else {
+          switch (data.type) {
+            case 'trying':
+              toast({
+                title: `Searching ${data.label}...`,
+                description: data.message,
+              });
+              break;
+
+            case 'success':
+              toast({
+                title: "Source found!",
+                description: data.message,
+              });
+              break;
+
+            case 'error':
+              toast({
+                variant: "destructive",
+                title: `${data.label} failed`,
+                description: data.message,
+              });
+              break;
+
+            case 'complete':
+              eventSource.close();
+              setSearchLoading(false);
+
+              if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+                setFoundTorrents(data.data);
+                toast({
+                  title: "Search complete",
+                  description: data.message,
+                });
+              } else {
                 toast({
                   variant: "destructive",
-                  title: "Search failed",
-                  description: data.Error || 'Unknown error',
+                  title: "No results",
+                  description: data.message || "No torrents found",
                 });
-            }
+              }
+              break;
+          }
+        } catch (e) {
+          console.error('Failed to parse SSE event:', e);
+        }
+      };
 
-        }
-        catch(error) {
-            toast({
-              variant: "destructive",
-              title: "Network error",
-              description: "Unable to connect to server",
-            });
-        }
+      eventSource.onerror = () => {
+        eventSource.close();
         setSearchLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Connection error",
+          description: "Lost connection to server",
+        });
+      };
     }
 
     // Unified download handler - works for both single and batch downloads

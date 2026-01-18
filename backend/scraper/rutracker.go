@@ -9,7 +9,11 @@ import (
 )
 
 func ScrapeRuTracker(url string, torrentName string, creds RutrackerCredentials) ([]RutrackerTorrent, error) {
-	ctx, cancel := GetPool().NewTabContext(120 * time.Second)
+	return ScrapeRuTrackerWithTimeout(url, torrentName, creds, 120*time.Second)
+}
+
+func ScrapeRuTrackerWithTimeout(url string, torrentName string, creds RutrackerCredentials, timeout time.Duration) ([]RutrackerTorrent, error) {
+	ctx, cancel := GetPool().NewTabContext(timeout)
 	defer cancel()
 
 	var results []RutrackerTorrent

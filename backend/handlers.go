@@ -224,6 +224,32 @@ func listTorrents(c *gin.Context) {
 	c.JSON(http.StatusOK, statuses)
 }
 
+func deleteTorrent(c *gin.Context) {
+	id := c.Param("id")
+	var torrentId int
+	fmt.Sscanf(id, "%d", &torrentId)
+
+	deleteData := c.Query("deleteData") == "true"
+
+	args := map[string]interface{}{
+		"ids":               []int{torrentId},
+		"delete-local-data": deleteData,
+	}
+
+	result, err := client.SendRequest("torrent-remove", args)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result.Result != "success" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove torrent"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Torrent removed successfully"})
+}
+
 func scrapePirateBay(c *gin.Context) {
 	name := c.Param("name")
 

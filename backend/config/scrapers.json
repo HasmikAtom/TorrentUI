@@ -1,0 +1,46 @@
+{
+  "thepiratebay": {
+    "name": "ThePirateBay",
+    "timeout_seconds": 15,
+    "urls": [
+      {
+        "host": "thepiratebay.org",
+        "label": "Main Site"
+      },
+      {
+        "host": "thepiratebay10.org",
+        "label": "Proxy 1"
+      },
+      {
+        "host": "piratebay.party",
+        "label": "Proxy 2"
+      },
+      {
+        "host": "thehiddenbay.com",
+        "label": "Proxy 3"
+      },
+      {
+        "host": "tpb.party",
+        "label": "Proxy 4"
+      }
+    ]
+  },
+  "rutracker": {
+    "name": "RuTracker",
+    "timeout_seconds": 20,
+    "urls": [
+      {
+        "host": "rutracker.org",
+        "label": "Main Site"
+      },
+      {
+        "host": "rutracker.net",
+        "label": "Proxy 1"
+      },
+      {
+        "host": "rutracker.nl",
+        "label": "Proxy 2"
+      }
+    ]
+  }
+}

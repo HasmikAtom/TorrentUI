@@ -47,7 +47,7 @@ const TorrentUI: React.FC = () => {
   return (
     <>
       <TabsPrimitive.Root value={activeTab} onValueChange={handleTabChange} className='pt-[20px]'>
-        <TabsList className="grid w-[500px] grid-cols-3 mx-auto">
+        <TabsList className="grid w-[400px] grid-cols-3 mx-auto">
           <TabsTrigger className='data-[state=active]:bg-black data-[state=active]:text-white flex items-center gap-2' value="download">
             <Download className="w-4 h-4" />
             Download
