@@ -19,7 +19,7 @@ interface Props {
   downloading: boolean;
 }
 
-export const ScrapedTorrentsCards: React.FC<Props> = ({
+export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
   foundTorrents,
   downloadSource,
   handleSingleDownload,
@@ -71,13 +71,13 @@ export const ScrapedTorrentsCards: React.FC<Props> = ({
           {foundTorrents && foundTorrents.length > 0 ? (
             <div>
               <div className="space-y-4">
-                {foundTorrents.map((torrent, index) => {
+                {foundTorrents.map((torrent) => {
                   const downloadUrl = torrent[downloadSource] || '';
                   const isSelected = selectedTorrents.has(torrent.id);
 
                   return (
                     <div
-                      key={index}
+                      key={torrent.id}
                       className={`space-y-2 border-b pb-4 last:border-b-0 ${isSelected ? 'bg-blue-50 -mx-4 px-4 py-2 rounded' : ''}`}
                     >
                       <div className="flex items-start gap-3">
@@ -136,4 +136,4 @@ export const ScrapedTorrentsCards: React.FC<Props> = ({
       </CardContent>
     </Card>
   );
-}
+});

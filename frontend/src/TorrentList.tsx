@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import {
@@ -18,7 +18,7 @@ interface Props {
   refreshTrigger?: number;
 }
 
-export const TorrentList: React.FC<Props> = ({ refreshTrigger }) => {
+export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
     const [torrents, setTorrents] = useState<TorrentStatus[] | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -123,8 +123,8 @@ export const TorrentList: React.FC<Props> = ({ refreshTrigger }) => {
         <CardContent>
           {torrents && torrents.length > 0 ? (
             <div className="space-y-4">
-              {torrents.map((torrent, index) => (
-                <div key={index} className="space-y-2 border-b pb-4 last:border-b-0">
+              {torrents.map((torrent) => (
+                <div key={torrent.id} className="space-y-2 border-b pb-4 last:border-b-0">
                   <div className="flex justify-between">
                     <span className="font-medium">Name:</span>
                     <span>{torrent.name}</span>
@@ -200,4 +200,4 @@ export const TorrentList: React.FC<Props> = ({ refreshTrigger }) => {
       </Dialog>
     </>
     );
-  };
+  });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ScrapedTorrents } from '../Models';
 import { ScrapeSearch } from './ScrapeSearch';
 import { ScrapedTorrentsCards } from './ScrapedTorrents';
@@ -46,18 +46,34 @@ export const ScraperUI: React.FC<Props> = ({
     const [torrentName, setTorrentName] = useState<string>("");
     const [foundTorrents, setFoundTorrents] = useState<ScrapedTorrents[] | null>(null);
     const [selectedTorrents, setSelectedTorrents] = useState<Map<string, string>>(new Map());
+    const eventSourceRef = useRef<EventSource | null>(null);
     const { toast } = useToast();
+
+    // Cleanup EventSource on unmount
+    useEffect(() => {
+      return () => {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+        }
+      };
+    }, []);
 
     const config = ScraperConfig[type];
     const downloadSource = config.downloadSource;
 
     const handleScrapeSearch = async () => {
+      // Close any existing EventSource
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+
       setSearchLoading(true);
       setFoundTorrents(null);
 
       // Use SSE for real-time progress updates
       const streamUrl = `${config.scrapeStreamEndpoint}${encodeURIComponent(torrentName)}/stream`;
       const eventSource = new EventSource(streamUrl);
+      eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {
         try {
@@ -88,6 +104,7 @@ export const ScraperUI: React.FC<Props> = ({
 
             case 'complete':
               eventSource.close();
+              eventSourceRef.current = null;
               setSearchLoading(false);
 
               if (data.data && Array.isArray(data.data) && data.data.length > 0) {
@@ -112,6 +129,7 @@ export const ScraperUI: React.FC<Props> = ({
 
       eventSource.onerror = () => {
         eventSource.close();
+        eventSourceRef.current = null;
         setSearchLoading(false);
         toast({
           variant: "destructive",
