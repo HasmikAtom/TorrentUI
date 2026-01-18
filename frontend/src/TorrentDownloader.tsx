@@ -3,9 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Download, RotateCw, FileUp } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { MediaTypeSelector } from './Scraper/MediaTypeSelector';
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
@@ -18,7 +25,8 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
   const [torrentFile, setTorrentFile] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
-  const [contentType, setContentType] = useState<string>('Movie');
+  const [mediaType, setMediaType] = useState<string>('');
+  const [showDialog, setShowDialog] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -52,7 +60,7 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
       if (torrentFile) {
         formData.append('torrentFile', torrentFile);
       }
-      formData.append('contentType', contentType);
+      formData.append('contentType', mediaType);
 
       const response = await fetch('/api/download', {
         method: 'POST',
@@ -63,6 +71,8 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
       if (response.ok) {
         setMagnetLink('');
         setTorrentFile(null);
+        setShowDialog(false);
+        setMediaType('');
         onDownloadComplete?.();
       } else {
         console.error('Download failed:', data.error);
@@ -110,25 +120,6 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <RadioGroup 
-            value={contentType} 
-            onValueChange={setContentType} 
-            className="flex justify-between mb-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="Movies" id="movie" />
-              <Label htmlFor="movie">Movie</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="Series" id="series" />
-              <Label htmlFor="series">Series</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="Music" id="music" />
-              <Label htmlFor="music">Music</Label>
-            </div>
-          </RadioGroup>
-
           <Input
             type="text"
             placeholder="Enter magnet link..."
@@ -169,19 +160,44 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
           </div>
 
           <Button
-            onClick={handleDownload}
-            disabled={loading || (!magnetLink && !torrentFile)}
+            onClick={() => setShowDialog(true)}
+            disabled={!magnetLink && !torrentFile}
             className="w-full"
           >
-            {loading ? (
-              <RotateCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
+            <Download className="w-4 h-4" />
             <span className="ml-2">Download</span>
           </Button>
         </div>
       </CardContent>
+
+      <Dialog open={showDialog} onOpenChange={(open) => {
+        setShowDialog(open);
+        if (!open) setMediaType('');
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Select Media Type</DialogTitle>
+            <DialogDescription>
+              Choose where to save this torrent
+            </DialogDescription>
+          </DialogHeader>
+          <MediaTypeSelector value={mediaType} onValueChange={setMediaType} idPrefix="downloader" />
+          <DialogFooter>
+            <Button
+              onClick={handleDownload}
+              disabled={!mediaType || loading}
+              className="w-full"
+            >
+              {loading ? (
+                <RotateCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span className="ml-2">{loading ? 'Downloading...' : 'Download'}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
