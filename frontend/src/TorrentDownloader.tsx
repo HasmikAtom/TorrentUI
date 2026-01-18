@@ -129,41 +129,29 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
             </div>
           </RadioGroup>
 
-          <div className="flex space-x-2">
-            <Input
-              type="text"
-              placeholder="Enter magnet link..."
-              value={magnetLink}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMagnetLink(e.target.value)}
-              className="flex-1"
-            />
-            <Input
-              type="file"
-              accept=".torrent"
-              onChange={handleFileChange}
-              className="hidden"
-              ref={fileInputRef}
-            />
-            <Button 
-              variant="outline" 
-              onClick={() => fileInputRef.current?.click()}
-              className="mr-2"
-            >
-              <FileUp className="w-4 h-4 mr-2" />
-              Select File
-            </Button>
-            <Button 
-              onClick={handleDownload}
-              disabled={loading || (!magnetLink && !torrentFile)}
-            >
-              {loading ? (
-                <RotateCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              <span className="ml-2">Download</span>
-            </Button>
-          </div>
+          <Input
+            type="text"
+            placeholder="Enter magnet link..."
+            value={magnetLink}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMagnetLink(e.target.value)}
+            className="w-full"
+          />
+
+          <Input
+            type="file"
+            accept=".torrent"
+            onChange={handleFileChange}
+            className="hidden"
+            ref={fileInputRef}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full"
+          >
+            <FileUp className="w-4 h-4 mr-2" />
+            Select File
+          </Button>
 
           <div
             onDragOver={handleDragOver}
@@ -179,6 +167,19 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
               <p>Drag and drop .torrent file here</p>
             )}
           </div>
+
+          <Button
+            onClick={handleDownload}
+            disabled={loading || (!magnetLink && !torrentFile)}
+            className="w-full"
+          >
+            {loading ? (
+              <RotateCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span className="ml-2">Download</span>
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -6,6 +6,7 @@ import * as TabsPrimitive from "@radix-ui/react-tabs"
 import { ScraperUI } from "./Scraper/ScraperUI"
 import { Toaster } from "@/components/ui/toaster"
 import { Download, Skull, Compass } from "lucide-react"
+import { ThemeToggle } from "./components/ThemeToggle"
 
 const TAB_ORDER = ["download", "thepiratebay", "rutracker"] as const;
 type TabName = typeof TAB_ORDER[number];
@@ -47,20 +48,23 @@ const TorrentUI: React.FC = () => {
   return (
     <>
       <TabsPrimitive.Root value={activeTab} onValueChange={handleTabChange} className='pt-[20px]'>
-        <TabsList className="grid w-[400px] grid-cols-3 mx-auto">
-          <TabsTrigger className='data-[state=active]:bg-black data-[state=active]:text-white flex items-center gap-2' value="download">
-            <Download className="w-4 h-4" />
-            Download
-          </TabsTrigger>
-          <TabsTrigger className='data-[state=active]:bg-black data-[state=active]:text-white flex items-center gap-2' value="thepiratebay">
-            <Skull className="w-4 h-4" />
-            Pirate Bay
-          </TabsTrigger>
-          <TabsTrigger className='data-[state=active]:bg-black data-[state=active]:text-white flex items-center gap-2' value="rutracker">
-            <Compass className="w-4 h-4" />
-            Rutracker
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <TabsList className="grid w-[400px] grid-cols-3">
+            <TabsTrigger className='data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-2' value="download">
+              <Download className="w-4 h-4" />
+              Download
+            </TabsTrigger>
+            <TabsTrigger className='data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-2' value="thepiratebay">
+              <Skull className="w-4 h-4" />
+              Pirate Bay
+            </TabsTrigger>
+            <TabsTrigger className='data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-2' value="rutracker">
+              <Compass className="w-4 h-4" />
+              Rutracker
+            </TabsTrigger>
+          </TabsList>
+          <ThemeToggle />
+        </div>
 
         <div className="overflow-hidden">
           <div
