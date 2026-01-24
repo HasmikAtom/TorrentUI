@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-import { TDownloadPopup } from './DownloadPopup';
+import { TorrentDownloadPopup } from './DownloadPopup';
 import { BatchDownloadPopup } from './BatchDownloadPopup';
 import { ScrapedTorrents } from '../Models';
 import { DownloadSource } from './ScraperUI';
@@ -116,7 +116,7 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
                           </div>
 
                           <div className="flex space-x-2">
-                            <TDownloadPopup
+                            <TorrentDownloadPopup
                               downloadUrl={downloadUrl}
                               handleDownload={handleSingleDownload}
                               downloading={downloading}

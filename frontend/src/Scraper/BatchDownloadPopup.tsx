@@ -29,7 +29,8 @@ export const BatchDownloadPopup: React.FC<Props> = ({
       <DialogTrigger asChild>
         <Button
           size="sm"
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 text-white hover:opacity-90"
+          style={{ backgroundColor: 'rgb(37, 99, 235)' }}
         >
           <Download size={14} />
           <span>Download Selected ({selectedCount})</span>
@@ -48,6 +49,8 @@ export const BatchDownloadPopup: React.FC<Props> = ({
             <Button
               disabled={!mediaType || downloading}
               onClick={handleDownload}
+              className="text-white hover:opacity-90"
+              style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
               <Download />
               {downloading ? 'Downloading...' : `Download ${selectedCount} Torrents`}

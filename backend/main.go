@@ -64,6 +64,7 @@ func main() {
 	r.GET("/status/:id", getTorrentStatus)
 	r.GET("/torrents", listTorrents)
 	r.DELETE("/torrents/:id", deleteTorrent)
+	r.GET("/storage", getStorageInfo)
 
 	r.POST("/scrape/piratebay/:name", scrapePirateBay)
 	r.POST("/scrape/rutracker/:name", scrapeRuTracker)

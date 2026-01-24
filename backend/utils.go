@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
+	"syscall"
 )
 
 func SetConfigs() *Config {
@@ -62,6 +65,158 @@ func getStatusString(status int) string {
 	default:
 		return "Unknown"
 	}
+}
+
+// getDiskUsage returns disk usage statistics for a given path
+func getDiskUsage(path string) (StorageInfo, error) {
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(path, &stat); err != nil {
+		return StorageInfo{}, err
+	}
+
+	total := stat.Blocks * uint64(stat.Bsize)
+	available := stat.Bavail * uint64(stat.Bsize)
+	used := total - available
+
+	return StorageInfo{
+		Total:     total,
+		Used:      used,
+		Available: available,
+	}, nil
+}
+
+// Mount represents a mount point from /proc/mounts
+type Mount struct {
+	Device     string
+	MountPoint string
+	FSType     string
+}
+
+// Filesystem types to exclude (virtual/system filesystems)
+var excludedFSTypes = map[string]bool{
+	"proc":        true,
+	"sysfs":       true,
+	"devpts":      true,
+	"tmpfs":       true,
+	"devtmpfs":    true,
+	"cgroup":      true,
+	"cgroup2":     true,
+	"pstore":      true,
+	"securityfs":  true,
+	"debugfs":     true,
+	"configfs":    true,
+	"fusectl":     true,
+	"mqueue":      true,
+	"hugetlbfs":   true,
+	"autofs":      true,
+	"binfmt_misc": true,
+	"tracefs":     true,
+	"overlay":     true,
+	"nsfs":        true,
+	"squashfs":    true,
+	"efivarfs":    true,
+	"ramfs":       true,
+	"fuse.portal": true,
+}
+
+// Paths to exclude
+var excludedPaths = []string{
+	"/proc",
+	"/sys",
+	"/dev",
+	"/run",
+	"/snap",
+	"/boot",
+}
+
+// isRunningInDocker checks if the application is running inside a Docker container
+func isRunningInDocker() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	return os.Getenv("DOCKER_CONTAINER") == "true"
+}
+
+// hasHostFSMount checks if /hostfs is mounted (host filesystem access)
+func hasHostFSMount() bool {
+	_, err := os.Stat("/hostfs")
+	return err == nil
+}
+
+// getMounts reads /proc/mounts and returns relevant mount points
+// When running in Docker with /hostfs mounted, it finds mounts under /hostfs
+// and returns them for display without the /hostfs prefix
+func getMounts() ([]Mount, error) {
+	file, err := os.Open("/proc/mounts")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var mounts []Mount
+	seen := make(map[string]bool)
+	inDocker := isRunningInDocker()
+	hasHostFS := hasHostFSMount()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 3 {
+			continue
+		}
+
+		device := fields[0]
+		mountPoint := fields[1]
+		fsType := fields[2]
+
+		// Skip excluded filesystem types
+		if excludedFSTypes[fsType] {
+			continue
+		}
+
+		// When in Docker with hostfs, only look at mounts under /hostfs
+		// These represent the actual host filesystems
+		if inDocker && hasHostFS {
+			if !strings.HasPrefix(mountPoint, "/hostfs/") && mountPoint != "/hostfs" {
+				continue
+			}
+		}
+
+		// Get the display path (without /hostfs prefix)
+		displayPath := mountPoint
+		if strings.HasPrefix(mountPoint, "/hostfs") {
+			displayPath = strings.TrimPrefix(mountPoint, "/hostfs")
+			if displayPath == "" {
+				displayPath = "/"
+			}
+		}
+
+		// Skip excluded paths (check against display path)
+		skip := false
+		for _, excludedPath := range excludedPaths {
+			if strings.HasPrefix(displayPath, excludedPath) {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+
+		// Skip if we've already seen this device (avoid duplicates)
+		if seen[device] {
+			continue
+		}
+		seen[device] = true
+
+		mounts = append(mounts, Mount{
+			Device:     device,
+			MountPoint: mountPoint, // Keep the actual path for statfs
+			FSType:     fsType,
+		})
+	}
+
+	return mounts, scanner.Err()
 }
 
 // Safe type assertion helpers to prevent panics

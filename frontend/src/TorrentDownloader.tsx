@@ -74,11 +74,23 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
         setShowDialog(false);
         setMediaType('');
         onDownloadComplete?.();
+        toast({
+          title: "Download started",
+          description: "Torrent added to queue",
+        });
       } else {
-        console.error('Download failed:', data.error);
+        toast({
+          variant: "destructive",
+          title: "Download failed",
+          description: data.error || "Failed to start download",
+        });
       }
     } catch (error) {
-      console.error('Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Network error",
+        description: error instanceof Error ? error.message : "Failed to connect to server",
+      });
     }
     setLoading(false);
   };
@@ -162,7 +174,8 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
           <Button
             onClick={() => setShowDialog(true)}
             disabled={!magnetLink && !torrentFile}
-            className="w-full"
+            className="w-full text-white hover:opacity-90"
+            style={{ backgroundColor: 'rgb(37, 99, 235)' }}
           >
             <Download className="w-4 h-4" />
             <span className="ml-2">Download</span>
@@ -186,7 +199,8 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
             <Button
               onClick={handleDownload}
               disabled={!mediaType || loading}
-              className="w-full"
+              className="w-full text-white hover:opacity-90"
+              style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
               {loading ? (
                 <RotateCw className="w-4 h-4 animate-spin" />

@@ -177,7 +177,7 @@ export const ScraperUI: React.FC<Props> = ({
         toast({
           variant: "destructive",
           title: "Network error",
-          description: "Unable to start download",
+          description: error instanceof Error ? error.message : "Unable to start download",
         });
       }
 

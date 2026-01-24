@@ -11,7 +11,7 @@ interface Props {
   downloading: boolean;
 }
 
-export const TDownloadPopup: React.FC<Props> = ({
+export const TorrentDownloadPopup: React.FC<Props> = ({
   downloadUrl,
   handleDownload,
   downloading,
@@ -29,7 +29,8 @@ export const TDownloadPopup: React.FC<Props> = ({
       <DialogTrigger asChild>
         <Button
           size="lg"
-          className="flex items-center gap-1 w-full justify-center"
+          className="flex items-center gap-1 w-full justify-center text-white hover:opacity-90"
+          style={{ backgroundColor: 'rgb(37, 99, 235)' }}
         >
           <Download size={16} />
           <span>Download</span>
@@ -48,6 +49,8 @@ export const TDownloadPopup: React.FC<Props> = ({
             <Button
               disabled={!mediaType || downloading}
               onClick={onDownload}
+              className="text-white hover:opacity-90"
+              style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
               <Download />
               {downloading ? 'Downloading...' : 'Download'}

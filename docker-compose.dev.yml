@@ -15,6 +15,7 @@ services:
       - "8081:8080"
     volumes:
       - ./backend:/app
+      - /:/hostfs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

@@ -7,9 +7,11 @@ import { ScraperUI } from "./Scraper/ScraperUI"
 import { Toaster } from "@/components/ui/toaster"
 import { Download, Skull, Compass } from "lucide-react"
 import { ThemeToggle } from "./components/ThemeToggle"
+import { StorageInfo } from "./StorageInfo"
 import Logo from "./assets/herxagon-logo.svg"
 
 const TAB_ORDER = ["download", "thepiratebay", "rutracker"] as const;
+const SLIDE_ANIMATION_MS = 300;
 type TabName = typeof TAB_ORDER[number];
 
 const TorrentUI: React.FC = () => {
@@ -41,7 +43,7 @@ const TorrentUI: React.FC = () => {
   // Reset slide direction after animation completes
   useEffect(() => {
     if (slideDirection) {
-      const timer = setTimeout(() => setSlideDirection(null), 300);
+      const timer = setTimeout(() => setSlideDirection(null), SLIDE_ANIMATION_MS);
       return () => clearTimeout(timer);
     }
   }, [slideDirection, activeTab]);
@@ -52,6 +54,8 @@ const TorrentUI: React.FC = () => {
         <img src={Logo} alt="Logo" className="h-12 dark:invert" />
         <ThemeToggle />
       </header>
+
+      <StorageInfo />
 
       <TabsPrimitive.Root value={activeTab} onValueChange={handleTabChange} className='pt-[20px]'>
         <div className="flex items-center justify-center mb-2">

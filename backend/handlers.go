@@ -250,6 +250,64 @@ func deleteTorrent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Torrent removed successfully"})
 }
 
+type StorageInfo struct {
+	Name      string `json:"name"`
+	Path      string `json:"path"`
+	Device    string `json:"device"`
+	FSType    string `json:"fsType"`
+	Total     uint64 `json:"total"`
+	Used      uint64 `json:"used"`
+	Available uint64 `json:"available"`
+}
+
+func getStorageInfo(c *gin.Context) {
+	log.Printf("Storage info: running in docker=%v, hasHostFS=%v", isRunningInDocker(), hasHostFSMount())
+
+	mounts, err := getMounts()
+	if err != nil {
+		log.Printf("Failed to get mounts: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read mount information"})
+		return
+	}
+
+	log.Printf("Found %d mounts after filtering", len(mounts))
+
+	storages := make([]StorageInfo, 0)
+
+	for _, mount := range mounts {
+		// MountPoint already has the correct path for statfs (including /hostfs if needed)
+		info, err := getDiskUsage(mount.MountPoint)
+		if err != nil {
+			log.Printf("Failed to get disk usage for %s: %v", mount.MountPoint, err)
+			continue
+		}
+
+		// Skip tiny filesystems (less than 100MB) - likely system mounts
+		if info.Total < 100*1024*1024 {
+			log.Printf("Skipping %s - too small (%d bytes)", mount.MountPoint, info.Total)
+			continue
+		}
+
+		// Display path without /hostfs prefix
+		displayPath := mount.MountPoint
+		if strings.HasPrefix(displayPath, "/hostfs") {
+			displayPath = strings.TrimPrefix(displayPath, "/hostfs")
+			if displayPath == "" {
+				displayPath = "/"
+			}
+		}
+
+		info.Name = displayPath
+		info.Path = displayPath
+		info.Device = mount.Device
+		info.FSType = mount.FSType
+		storages = append(storages, info)
+	}
+
+	log.Printf("Returning %d storage entries", len(storages))
+	c.JSON(http.StatusOK, storages)
+}
+
 func scrapePirateBay(c *gin.Context) {
 	name := c.Param("name")
 
