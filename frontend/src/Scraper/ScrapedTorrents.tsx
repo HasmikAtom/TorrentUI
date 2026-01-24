@@ -78,7 +78,7 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
                   return (
                     <div
                       key={torrent.id}
-                      className={`space-y-2 border-b pb-4 last:border-b-0 ${isSelected ? 'bg-blue-50 -mx-4 px-4 py-2 rounded' : ''}`}
+                      className={`space-y-2 border-b pb-4 last:border-b-0 ${isSelected ? 'bg-accent -mx-4 px-4 py-2 rounded' : ''}`}
                     >
                       <div className="flex items-start gap-3">
                         <input
