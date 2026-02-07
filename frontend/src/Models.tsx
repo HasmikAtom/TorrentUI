@@ -27,3 +27,21 @@ export interface SelectedTorrent {
   id: string;
   downloadUrl: string; // magnet for PirateBay, download_url for RuTracker
 }
+
+export interface PreparedTorrent {
+  id: number;
+  name: string;
+  ready: boolean;
+}
+
+export interface PreparedTorrentStatus {
+  id: number;
+  name: string;
+  ready: boolean;
+  metadataPercentComplete: number;
+}
+
+export interface BatchPrepareResponse {
+  torrents: PreparedTorrent[];
+  errors?: string[];
+}

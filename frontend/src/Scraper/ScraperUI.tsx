@@ -8,15 +8,11 @@ const ScraperConfig = {
   thepiratebay: {
     scrapeEndpoint: '/api/scrape/piratebay/',
     scrapeStreamEndpoint: '/api/scrape/piratebay/',
-    downloadEndpoint: '/api/download/batch',
-    downloadKey: 'magnetLinks',
     downloadSource: 'magnet' as const,
   },
   rutracker: {
     scrapeEndpoint: '/api/scrape/rutracker/',
     scrapeStreamEndpoint: '/api/scrape/rutracker/',
-    downloadEndpoint: '/api/download/file/batch',
-    downloadKey: 'urls',
     downloadSource: 'download_url' as const,
   }
 } as const
@@ -42,7 +38,6 @@ export const ScraperUI: React.FC<Props> = ({
 }) => {
 
     const [searchLoading, setSearchLoading] = useState<boolean>(false);
-    const [downloading, setDownloading] = useState<boolean>(false);
     const [torrentName, setTorrentName] = useState<string>("");
     const [foundTorrents, setFoundTorrents] = useState<ScrapedTorrents[] | null>(null);
     const [selectedTorrents, setSelectedTorrents] = useState<Map<string, string>>(new Map());
@@ -139,60 +134,13 @@ export const ScraperUI: React.FC<Props> = ({
       };
     }
 
-    // Unified download handler - works for both single and batch downloads
-    const handleDownload = async (downloadUrls: string[], mediaType: string) => {
-      if (downloadUrls.length === 0) return;
-
-      setDownloading(true);
-      try {
-        const body = {
-          [config.downloadKey]: downloadUrls,
-          contentType: mediaType,
-        };
-
-        const response = await fetch(config.downloadEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          toast({
-            title: "Download started",
-            description: `${downloadUrls.length} torrent(s) added to queue`,
-          });
-          clearSelection();
-          switchTab("download");
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Download failed",
-            description: data.error || 'Unknown error',
-          });
-        }
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Network error",
-          description: error instanceof Error ? error.message : "Unable to start download",
-        });
-      }
-
-      setDownloading(false);
-    };
-
-    // Single torrent download (from individual Download button)
-    const handleSingleDownload = async (downloadUrl: string, mediaType: string) => {
-      await handleDownload([downloadUrl], mediaType);
-    };
-
-    // Batch download (from Download Selected button)
-    const handleBatchDownload = async (mediaType: string) => {
-      const downloadUrls = Array.from(selectedTorrents.values());
-      await handleDownload(downloadUrls, mediaType);
+    const handleDownloadComplete = () => {
+      clearSelection();
+      switchTab("download");
+      toast({
+        title: "Download started",
+        description: "Torrent(s) added to queue",
+      });
     };
 
     const handleTorrentSearchClear = async () => {
@@ -243,13 +191,11 @@ export const ScraperUI: React.FC<Props> = ({
       <ScrapedTorrentsCards
         foundTorrents={foundTorrents}
         downloadSource={downloadSource}
-        handleSingleDownload={handleSingleDownload}
         selectedTorrents={selectedTorrents}
         onToggleSelection={toggleTorrentSelection}
         onSelectAll={selectAllTorrents}
         onClearSelection={clearSelection}
-        onBatchDownload={handleBatchDownload}
-        downloading={downloading}
+        onDownloadComplete={handleDownloadComplete}
       />
     </>
   );

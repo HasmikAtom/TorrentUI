@@ -61,6 +61,15 @@ func main() {
 	r.POST("/download/file", handleFileDownload)
 	r.POST("/download/batch", handleBatchDownload)
 	r.POST("/download/file/batch", handleBatchFileDownload)
+
+	// Prepare/finalize endpoints for name editing flow
+	r.POST("/download/prepare", handlePrepareDownload)
+	r.POST("/download/file/prepare", handleFilePrepareDownload)
+	r.POST("/download/prepare/batch", handleBatchPrepareDownload)
+	r.POST("/download/file/prepare/batch", handleBatchFilePrepareDownload)
+	r.GET("/download/prepare/status/:id", handlePrepareStatus)
+	r.POST("/download/finalize", handleFinalizeDownload)
+	r.POST("/download/cancel", handleCancelDownload)
 	r.GET("/status/:id", getTorrentStatus)
 	r.GET("/torrents", listTorrents)
 	r.DELETE("/torrents/:id", deleteTorrent)

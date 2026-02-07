@@ -10,28 +10,25 @@ import { DownloadSource } from './ScraperUI';
 interface Props {
   foundTorrents: ScrapedTorrents[] | null;
   downloadSource: DownloadSource;
-  handleSingleDownload: (downloadUrl: string, mediaType: string) => Promise<void>;
   selectedTorrents: Map<string, string>;
   onToggleSelection: (id: string, downloadUrl: string) => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
-  onBatchDownload: (mediaType: string) => Promise<void>;
-  downloading: boolean;
+  onDownloadComplete?: () => void;
 }
 
 export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
   foundTorrents,
   downloadSource,
-  handleSingleDownload,
   selectedTorrents,
   onToggleSelection,
   onSelectAll,
   onClearSelection,
-  onBatchDownload,
-  downloading,
+  onDownloadComplete,
 }) => {
 
   const selectedCount = selectedTorrents.size;
+  const isRuTracker = downloadSource === 'download_url';
 
   return (
     <Card className="w-full max-w-2xl mx-auto mt-8">
@@ -58,8 +55,9 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
               {selectedCount > 0 && (
                 <BatchDownloadPopup
                   selectedCount={selectedCount}
-                  onBatchDownload={onBatchDownload}
-                  downloading={downloading}
+                  downloadUrls={Array.from(selectedTorrents.values())}
+                  isRuTracker={isRuTracker}
+                  onDownloadComplete={onDownloadComplete}
                 />
               )}
             </div>
@@ -118,8 +116,8 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
                           <div className="flex space-x-2">
                             <TorrentDownloadPopup
                               downloadUrl={downloadUrl}
-                              handleDownload={handleSingleDownload}
-                              downloading={downloading}
+                              isRuTracker={isRuTracker}
+                              onDownloadComplete={onDownloadComplete}
                             />
                           </div>
                         </div>
