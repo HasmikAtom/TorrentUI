@@ -133,74 +133,53 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
         )}
       </CardHeader>
       <CardContent>
-        <div>
-          {filteredTorrents && filteredTorrents.length > 0 ? (
-            <div>
-              <div className="space-y-4">
-                {filteredTorrents.map((torrent) => {
-                  const downloadUrl = torrent[downloadSource] || '';
-                  const isSelected = selectedTorrents.has(torrent.id);
+        {filteredTorrents && filteredTorrents.length > 0 ? (
+          <div className="space-y-2">
+            {filteredTorrents.map((torrent) => {
+              const downloadUrl = torrent[downloadSource] || '';
+              const isSelected = selectedTorrents.has(torrent.id);
 
-                  return (
-                    <div
-                      key={torrent.id}
-                      className={`space-y-2 border-b pb-4 last:border-b-0 ${isSelected ? 'bg-accent -mx-4 px-4 py-2 rounded' : ''}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          id={`torrent-${torrent.id}`}
-                          checked={isSelected}
-                          onChange={() => onToggleSelection(torrent.id, downloadUrl)}
-                          className="mt-1 h-4 w-4 rounded border-gray-300 cursor-pointer"
-                          aria-label={`Select ${torrent.title}`}
-                        />
-                        <div className="flex-1 space-y-2">
-                          <div className="flex justify-between truncate">
-                            <span className="font-medium">Title: </span>
-                            <span className='w-[400px]'>{torrent.title}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-medium">Category: </span>
-                            <span>{torrent.category}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-medium">Size: </span>
-                            <span>{torrent.size} </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-medium">Seeders: </span>
-                            <span>{torrent.se}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-medium">Leechers: </span>
-                            <span>{torrent.le}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="font-medium">Uploader: </span>
-                            <span>{torrent.uploader}</span>
-                          </div>
-
-                          <div className="flex space-x-2">
-                            <TorrentDownloadPopup
-                              downloadUrl={downloadUrl}
-                              isRuTracker={isRuTracker}
-                              onDownloadComplete={onDownloadComplete}
-                            />
-                          </div>
-                        </div>
+              return (
+                <div
+                  key={torrent.id}
+                  className={`rounded-lg border p-3 transition-colors hover:bg-muted/50 ${isSelected ? 'bg-accent border-primary' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id={`torrent-${torrent.id}`}
+                      checked={isSelected}
+                      onChange={() => onToggleSelection(torrent.id, downloadUrl)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 cursor-pointer shrink-0"
+                      aria-label={`Select ${torrent.title}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-medium leading-snug break-words">{torrent.title}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs">{torrent.category}</span>
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs">{torrent.size}</span>
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-green-500">SE {torrent.se}</span>
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-red-400">LE {torrent.le}</span>
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs">{torrent.uploader}</span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <p className="text-center text-gray-500">
-              {foundTorrents && foundTorrents.length > 0 ? "No matching results" : "No active torrents"}
-            </p>
-          )}
-        </div>
+                    <div className="shrink-0">
+                      <TorrentDownloadPopup
+                        downloadUrl={downloadUrl}
+                        isRuTracker={isRuTracker}
+                        onDownloadComplete={onDownloadComplete}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-center text-gray-500">
+            {foundTorrents && foundTorrents.length > 0 ? "No matching results" : "No active torrents"}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
