@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./components/ui/dialog";
-import { RefreshCw, X, Trash2 } from "lucide-react";
+import { RefreshCw, X, Trash2, Pencil, Check } from "lucide-react";
 import { TorrentStatus } from "./Models";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +32,9 @@ export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
     const [torrents, setTorrents] = useState<TorrentStatus[] | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editName, setEditName] = useState("");
+    const editInputRef = useRef<HTMLInputElement>(null);
     const intervalRef = useRef<number | null>(null);
     const { toast } = useToast();
 
@@ -100,6 +103,50 @@ export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
       }
     };
 
+    const startEditing = (torrent: TorrentStatus) => {
+      setEditingId(torrent.id);
+      setEditName(torrent.name);
+      setTimeout(() => editInputRef.current?.focus(), 0);
+    };
+
+    const cancelEditing = () => {
+      setEditingId(null);
+      setEditName("");
+    };
+
+    const handleRename = async (id: number) => {
+      const trimmed = editName.trim();
+      if (!trimmed) {
+        cancelEditing();
+        return;
+      }
+      try {
+        const response = await fetch(`/api/torrents/${id}/rename`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: trimmed }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          toast({ title: "Renamed", description: "Torrent renamed successfully" });
+          await fetchTorrents();
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Rename failed",
+            description: data.error || "Could not rename torrent",
+          });
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Connection error",
+          description: error instanceof Error ? error.message : "Failed to connect to server",
+        });
+      }
+      cancelEditing();
+    };
+
     const startPolling = useCallback(() => {
       if (intervalRef.current === null) {
         intervalRef.current = window.setInterval(fetchTorrents, POLL_INTERVAL);
@@ -160,68 +207,94 @@ export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
         </CardHeader>
         <CardContent>
           {torrents && torrents.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {torrents.map((torrent) => (
-                <div key={torrent.id} className="space-y-2 border-b pb-4 last:border-b-0">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Name:</span>
-                    <span>{torrent.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Progress:</span>
-                    <span>{torrent.percentDone.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Speed:</span>
-                    <span>{(torrent.rateDownload / BYTES_PER_MB).toFixed(2)} MB/s</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Size:</span>
-                    <span>{formatSize(torrent.totalSize)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Added:</span>
-                    <span>{new Date(torrent.addedDate * 1000).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Status:</span>
-                    <span>{torrent.status}</span>
-                  </div>
-
-                  <div
-                    role="progressbar"
-                    aria-valuenow={torrent.percentDone}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`Download progress for ${torrent.name}`}
-                    className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5"
-                  >
-                    <div
-                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                      style={{ width: `${torrent.percentDone}%` }}
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-2 justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(torrent.id, false)}
-                      aria-label={`Remove ${torrent.name} from list`}
-                    >
-                      <X className="w-4 h-4 mr-1" />
-                      Remove
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-slate-700 text-white hover:bg-slate-800 border-slate-700"
-                      onClick={() => setDeleteConfirmId(torrent.id)}
-                      aria-label={`Delete ${torrent.name} and its files`}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </Button>
+                <div key={torrent.id} className="rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      {editingId === torrent.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            ref={editInputRef}
+                            className="flex-1 text-lg font-medium leading-snug bg-transparent border-b border-primary outline-none"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleRename(torrent.id);
+                              if (e.key === "Escape") cancelEditing();
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleRename(torrent.id)}
+                            aria-label="Confirm rename"
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-lg font-medium leading-snug break-words">{torrent.name}</p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs">{torrent.status}</span>
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs">{formatSize(torrent.totalSize)}</span>
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs">{torrent.percentDone.toFixed(1)}%</span>
+                        {torrent.rateDownload > 0 && (
+                          <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-blue-500">
+                            {(torrent.rateDownload / BYTES_PER_MB).toFixed(2)} MB/s
+                          </span>
+                        )}
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {new Date(torrent.addedDate * 1000).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <div
+                          role="progressbar"
+                          aria-valuenow={torrent.percentDone}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`Download progress for ${torrent.name}`}
+                          className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5"
+                        >
+                          <div
+                            className={`h-1.5 rounded-full transition-all duration-300 ${torrent.percentDone >= 100 ? 'bg-green-500' : 'bg-blue-600'}`}
+                            style={{ width: `${torrent.percentDone}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => startEditing(torrent)}
+                        aria-label={`Rename ${torrent.name}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDelete(torrent.id, false)}
+                        aria-label={`Remove ${torrent.name} from list`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteConfirmId(torrent.id)}
+                        aria-label={`Delete ${torrent.name} and its files`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

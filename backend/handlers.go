@@ -228,6 +228,68 @@ func listTorrents(c *gin.Context) {
 	c.JSON(http.StatusOK, statuses)
 }
 
+func renameTorrent(c *gin.Context) {
+	id := c.Param("id")
+	var torrentId int
+	fmt.Sscanf(id, "%d", &torrentId)
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "A non-empty name is required"})
+		return
+	}
+
+	// Get current torrent name
+	getArgs := map[string]interface{}{
+		"ids":    []int{torrentId},
+		"fields": []string{"name"},
+	}
+
+	getResult, err := client.SendRequest("torrent-get", getArgs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get torrent info: %v", err)})
+		return
+	}
+
+	var currentName string
+	if torrents, ok := getResult.Arguments["torrents"].([]interface{}); ok && len(torrents) > 0 {
+		if torrent, ok := torrents[0].(map[string]interface{}); ok {
+			currentName, _ = GetString(torrent, "name")
+		}
+	}
+
+	if currentName == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Torrent not found"})
+		return
+	}
+
+	if currentName == req.Name {
+		c.JSON(http.StatusOK, gin.H{"message": "Name unchanged"})
+		return
+	}
+
+	renameArgs := map[string]interface{}{
+		"ids":  []int{torrentId},
+		"path": currentName,
+		"name": req.Name,
+	}
+
+	renameResult, err := client.SendRequest("torrent-rename-path", renameArgs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to rename torrent: %v", err)})
+		return
+	}
+
+	if renameResult.Result != "success" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Rename failed: %s", renameResult.Result)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Torrent renamed successfully"})
+}
+
 func deleteTorrent(c *gin.Context) {
 	id := c.Param("id")
 	var torrentId int

@@ -73,6 +73,7 @@ func main() {
 	r.GET("/status/:id", getTorrentStatus)
 	r.GET("/torrents", listTorrents)
 	r.DELETE("/torrents/:id", deleteTorrent)
+	r.PUT("/torrents/:id/rename", renameTorrent)
 	r.GET("/storage", getStorageInfo)
 
 	r.POST("/scrape/piratebay/:name", scrapePirateBay)
