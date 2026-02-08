@@ -15,6 +15,14 @@ import { useToast } from "@/hooks/use-toast";
 
 const POLL_INTERVAL = 3000;
 const BYTES_PER_MB = 1024 * 1024;
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+
+function formatSize(bytes: number): string {
+  if (bytes >= BYTES_PER_GB) {
+    return `${(bytes / BYTES_PER_GB).toFixed(2)} GB`;
+  }
+  return `${(bytes / BYTES_PER_MB).toFixed(2)} MB`;
+}
 
 interface Props {
   refreshTrigger?: number;
@@ -166,6 +174,14 @@ export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
                   <div className="flex justify-between">
                     <span className="font-medium">Speed:</span>
                     <span>{(torrent.rateDownload / BYTES_PER_MB).toFixed(2)} MB/s</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Size:</span>
+                    <span>{formatSize(torrent.totalSize)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Added:</span>
+                    <span>{new Date(torrent.addedDate * 1000).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Status:</span>

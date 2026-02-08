@@ -3,6 +3,8 @@ export interface TorrentStatus {
   name: string;
   percentDone: number;
   rateDownload: number;
+  totalSize: number;
+  addedDate: number;
   status: string;
 }
 

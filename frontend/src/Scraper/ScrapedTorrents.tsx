@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 import { TorrentDownloadPopup } from './DownloadPopup';
@@ -15,6 +16,12 @@ interface Props {
   onSelectAll: () => void;
   onClearSelection: () => void;
   onDownloadComplete?: () => void;
+  filterText: string;
+  onFilterChange: (value: string) => void;
+  filterText2: string;
+  onFilterChange2: (value: string) => void;
+  selectedUploaders: Set<string>;
+  onToggleUploader: (uploader: string) => void;
 }
 
 export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
@@ -25,7 +32,37 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
   onSelectAll,
   onClearSelection,
   onDownloadComplete,
+  filterText,
+  onFilterChange,
+  filterText2,
+  onFilterChange2,
+  selectedUploaders,
+  onToggleUploader,
 }) => {
+
+  const filteredTorrents = useMemo(() => {
+    if (!foundTorrents) return foundTorrents;
+    let results = foundTorrents;
+    if (filterText.trim()) {
+      const lower = filterText.toLowerCase();
+      results = results.filter(t => t.title.toLowerCase().includes(lower));
+    }
+    if (filterText2.trim()) {
+      const lower2 = filterText2.toLowerCase();
+      results = results.filter(t => t.title.toLowerCase().includes(lower2));
+    }
+    if (selectedUploaders.size > 0) {
+      results = results.filter(t => selectedUploaders.has(t.uploader));
+    }
+    return results;
+  }, [foundTorrents, filterText, filterText2, selectedUploaders]);
+
+  const uploaders = useMemo(() => {
+    if (!foundTorrents) return [];
+    const set = new Set<string>();
+    foundTorrents.forEach(t => { if (t.uploader) set.add(t.uploader); });
+    return Array.from(set).sort();
+  }, [foundTorrents]);
 
   const selectedCount = selectedTorrents.size;
   const isRuTracker = downloadSource === 'download_url';
@@ -63,13 +100,44 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
             </div>
           )}
         </div>
+        {foundTorrents && foundTorrents.length > 0 && (
+          <div className="flex gap-6 !mt-6">
+            <div className="w-1/2 flex flex-col gap-2">
+              <Input
+                placeholder="Primary filter..."
+                value={filterText}
+                onChange={(e) => onFilterChange(e.target.value)}
+              />
+              <Input
+                placeholder="Secondary filter..."
+                value={filterText2}
+                onChange={(e) => onFilterChange2(e.target.value)}
+              />
+            </div>
+            <div className="w-1/2 flex flex-wrap gap-1 content-start overflow-auto max-h-20">
+              {uploaders.map(uploader => (
+                <button
+                  key={uploader}
+                  onClick={() => onToggleUploader(uploader)}
+                  className={`px-2 py-0.5 rounded-full text-xs border cursor-pointer transition-colors ${
+                    selectedUploaders.has(uploader)
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-muted-foreground border-border hover:bg-accent'
+                  }`}
+                >
+                  {uploader}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div>
-          {foundTorrents && foundTorrents.length > 0 ? (
+          {filteredTorrents && filteredTorrents.length > 0 ? (
             <div>
               <div className="space-y-4">
-                {foundTorrents.map((torrent) => {
+                {filteredTorrents.map((torrent) => {
                   const downloadUrl = torrent[downloadSource] || '';
                   const isSelected = selectedTorrents.has(torrent.id);
 
@@ -128,7 +196,9 @@ export const ScrapedTorrentsCards: React.FC<Props> = React.memo(({
               </div>
             </div>
           ) : (
-            <p className="text-center text-gray-500">No active torrents</p>
+            <p className="text-center text-gray-500">
+              {foundTorrents && foundTorrents.length > 0 ? "No matching results" : "No active torrents"}
+            </p>
           )}
         </div>
       </CardContent>

@@ -269,11 +269,16 @@ func ParseTorrentStatus(torrent map[string]interface{}) (TorrentStatus, bool) {
 		return TorrentStatus{}, false
 	}
 
+	totalSize, _ := GetInt64(torrent, "totalSize")
+	addedDate, _ := GetInt64(torrent, "addedDate")
+
 	status := TorrentStatus{
 		ID:           id,
 		Name:         name,
 		PercentDone:  percentDone * 100,
 		RateDownload: rateDownload,
+		TotalSize:    totalSize,
+		AddedDate:    addedDate,
 		Status:       getStatusString(statusCode),
 	}
 

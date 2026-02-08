@@ -41,6 +41,9 @@ export const ScraperUI: React.FC<Props> = ({
     const [torrentName, setTorrentName] = useState<string>("");
     const [foundTorrents, setFoundTorrents] = useState<ScrapedTorrents[] | null>(null);
     const [selectedTorrents, setSelectedTorrents] = useState<Map<string, string>>(new Map());
+    const [filterText, setFilterText] = useState<string>("");
+    const [filterText2, setFilterText2] = useState<string>("");
+    const [selectedUploaders, setSelectedUploaders] = useState<Set<string>>(new Set());
     const eventSourceRef = useRef<EventSource | null>(null);
     const { toast } = useToast();
 
@@ -148,6 +151,9 @@ export const ScraperUI: React.FC<Props> = ({
       setFoundTorrents(null);
       setTorrentName("");
       setSelectedTorrents(new Map());
+      setFilterText("");
+      setFilterText2("");
+      setSelectedUploaders(new Set());
     }
 
     const toggleTorrentSelection = (id: string, downloadUrl: string) => {
@@ -196,6 +202,19 @@ export const ScraperUI: React.FC<Props> = ({
         onSelectAll={selectAllTorrents}
         onClearSelection={clearSelection}
         onDownloadComplete={handleDownloadComplete}
+        filterText={filterText}
+        onFilterChange={setFilterText}
+        filterText2={filterText2}
+        onFilterChange2={setFilterText2}
+        selectedUploaders={selectedUploaders}
+        onToggleUploader={(uploader) => {
+          setSelectedUploaders(prev => {
+            const next = new Set(prev);
+            if (next.has(uploader)) next.delete(uploader);
+            else next.add(uploader);
+            return next;
+          });
+        }}
       />
     </>
   );
