@@ -1,4 +1,4 @@
-.PHONY: dev dev-build dev-down dev-logs dev-restart prod prod-build prod-down prod-logs prod-restart clean-dev clean-prod
+.PHONY: dev dev-build dev-down dev-logs dev-restart prod prod-build prod-down prod-logs prod-restart clean-dev clean-prod deploy-up deploy-build deploy-down deploy-logs
 
 # Development
 dev:
@@ -34,6 +34,19 @@ prod-logs:
 
 prod-restart:
 	docker compose -p torrent-prod -f docker-compose.yml restart
+
+# Deploy webhook
+deploy-up:
+	docker compose -p torrent-deploy -f ../torrent-deploy/docker-compose.yml up -d
+
+deploy-build:
+	docker compose -p torrent-deploy -f ../torrent-deploy/docker-compose.yml up -d --build
+
+deploy-down:
+	docker compose -p torrent-deploy -f ../torrent-deploy/docker-compose.yml down
+
+deploy-logs:
+	docker compose -p torrent-deploy -f ../torrent-deploy/docker-compose.yml logs -f
 
 # Cleanup
 clean-dev:
