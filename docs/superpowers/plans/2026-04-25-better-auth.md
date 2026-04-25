@@ -401,32 +401,40 @@ before(() => {
 
 after(() => rmSync(tmpDir, { recursive: true, force: true }));
 
+function makeUser(over: { email: string; name?: string; id?: string }) {
+  const now = new Date();
+  return {
+    id: over.id ?? "u-test",
+    email: over.email,
+    name: over.name ?? "Test",
+    emailVerified: false,
+    createdAt: now,
+    updatedAt: now,
+  } as Parameters<typeof import("../auth.js").beforeUserCreate>[0];
+}
+
 test("allowlisted email is permitted, role=user", async () => {
   const { db, runOwnedMigrations } = await import("../db.js");
   const { beforeUserCreate } = await import("../auth.js");
   runOwnedMigrations();
   db.prepare("INSERT OR IGNORE INTO invited_emails (email) VALUES (?)").run("alice@example.com");
 
-  const result = await beforeUserCreate({
-    id: "u1", email: "alice@example.com", name: "Alice",
-  });
-  assert.equal(result.data.role, "user");
+  const result = await beforeUserCreate(makeUser({ id: "u1", email: "alice@example.com", name: "Alice" }));
+  assert.equal((result as any).data.role, "user");
 });
 
 test("non-allowlisted email throws FORBIDDEN", async () => {
   const { beforeUserCreate } = await import("../auth.js");
   await assert.rejects(
-    () => beforeUserCreate({ id: "u2", email: "stranger@example.com", name: "Eve" }),
+    () => beforeUserCreate(makeUser({ id: "u2", email: "stranger@example.com", name: "Eve" })),
     /Email not on allowlist/
   );
 });
 
 test("bootstrap admin email gets role=admin", async () => {
   const { beforeUserCreate } = await import("../auth.js");
-  const result = await beforeUserCreate({
-    id: "u3", email: "BOSS@example.com", name: "Boss",
-  });
-  assert.equal(result.data.role, "admin");
+  const result = await beforeUserCreate(makeUser({ id: "u3", email: "BOSS@example.com", name: "Boss" }));
+  assert.equal((result as any).data.role, "admin");
 });
 ```
 
