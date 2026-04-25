@@ -43,3 +43,9 @@ dist-ssr
 
 
 install.sh
+
+# SQLite (Better Auth storage)
+data/auth.sqlite
+data/auth.sqlite-journal
+data/auth.sqlite-shm
+data/auth.sqlite-wal
