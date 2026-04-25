@@ -7,6 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import Logo from "@/assets/herxagon-logo.svg";
 
 type User = {
   id: string;
@@ -20,7 +22,9 @@ export function AppShell({ user, children }: { user: User; children: React.React
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="font-semibold text-lg">TorrentUI</Link>
+        <Link to="/" aria-label="TorrentUI home">
+          <img src={Logo} alt="TorrentUI" className="h-12 dark:invert" />
+        </Link>
 
         <div className="flex items-center gap-4">
           {user.role === "admin" && (
@@ -28,6 +32,8 @@ export function AppShell({ user, children }: { user: User; children: React.React
               Admin
             </Link>
           )}
+
+          <ThemeToggle />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
