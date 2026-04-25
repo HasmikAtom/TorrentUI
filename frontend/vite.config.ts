@@ -17,9 +17,8 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/api" : {
-        target: "http://backend:8080/",
+        target: process.env.VITE_API_TARGET || "http://localhost:3000/",
         changeOrigin: true,
-        rewrite: (path: any) => path.replace(/^\/api/, "")
       }
     }
   },
@@ -31,7 +30,6 @@ export default defineConfig({
       "/api" : {
         target: process.env.VITE_API_TARGET || "http://localhost:3000/",
         changeOrigin: true,
-        rewrite: (path: any) => path.replace(/^\/api/, "")
       }
     }
   }

@@ -8,7 +8,7 @@ services:
     container_name: torrent-auth-dev
     environment:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-dev-only-secret-change-me-dev-only-secret}
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:5173}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - BOOTSTRAP_ADMIN_EMAILS=${BOOTSTRAP_ADMIN_EMAILS:-}
@@ -42,6 +42,21 @@ services:
       - /:/hostfs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: torrent-frontend-dev
+    environment:
+      - VITE_API_TARGET=http://auth-service:3000/
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - auth-service
 
 networks:
   default:
