@@ -1107,24 +1107,39 @@ git commit -m "require auth headers on all Go routes except /health"
 **Files:**
 - Modify: `frontend/package.json`
 
-- [ ] **Step 1: Install `better-auth` and `react-router-dom`**
+- [ ] **Step 1: Switch the frontend to pnpm if it isn't already**
+
+If `frontend/package-lock.json` exists, delete it and switch to pnpm:
+```bash
+cd frontend
+rm -f package-lock.json
+rm -rf node_modules
+pnpm install
+```
+Otherwise just ensure pnpm is in use:
+```bash
+cd frontend && pnpm install
+```
+
+- [ ] **Step 2: Install `better-auth` and `react-router-dom`**
 
 ```bash
 cd frontend
-npm install better-auth react-router-dom
-npm install --save-dev @types/react-router-dom
+pnpm add better-auth react-router-dom
+pnpm add -D @types/react-router-dom
 ```
 
-- [ ] **Step 2: Verify install**
+- [ ] **Step 3: Verify install**
 
-Run: `npm ls better-auth react-router-dom`
+Run: `pnpm ls better-auth react-router-dom`
 Expected: both listed at expected versions, no peer-dep warnings.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add frontend/package.json frontend/package-lock.json
-git commit -m "add better-auth and react-router-dom to frontend"
+git add frontend/package.json frontend/pnpm-lock.yaml
+git rm -f frontend/package-lock.json 2>/dev/null || true
+git commit -m "switch frontend to pnpm and add better-auth + react-router-dom"
 ```
 
 ---
@@ -1151,7 +1166,7 @@ export const { signIn, signOut, useSession } = authClient;
 
 - [ ] **Step 2: Typecheck**
 
-Run: `cd frontend && npx tsc --noEmit`
+Run: `cd frontend && pnpm exec tsc --noEmit`
 Expected: no errors.
 
 - [ ] **Step 3: Commit**
@@ -1195,7 +1210,7 @@ Use search-replace within the file for all bare `fetch(` calls that go to `/api/
 
 - [ ] **Step 4: Typecheck**
 
-Run: `cd frontend && npx tsc --noEmit`
+Run: `cd frontend && pnpm exec tsc --noEmit`
 Expected: no errors.
 
 - [ ] **Step 5: Commit**
@@ -1257,7 +1272,7 @@ export function LoginScreen() {
 
 - [ ] **Step 2: Typecheck**
 
-Run: `cd frontend && npx tsc --noEmit`
+Run: `cd frontend && pnpm exec tsc --noEmit`
 Expected: no errors.
 
 - [ ] **Step 3: Commit**
@@ -1333,7 +1348,7 @@ export function AppShell({ user, children }: { user: User; children: React.React
 
 - [ ] **Step 2: Typecheck**
 
-Run: `cd frontend && npx tsc --noEmit`
+Run: `cd frontend && pnpm exec tsc --noEmit`
 Expected: no errors.
 
 - [ ] **Step 3: Commit**
@@ -1415,7 +1430,7 @@ export function AdminPage() {
 
 - [ ] **Step 5: Typecheck and dev-build**
 
-Run: `cd frontend && npx tsc --noEmit && npm run build`
+Run: `cd frontend && pnpm exec tsc --noEmit && pnpm build`
 Expected: no errors.
 
 - [ ] **Step 6: Commit**
@@ -1572,7 +1587,7 @@ If missing, add them via shadcn: `cd frontend && npx shadcn@latest add input ale
 
 - [ ] **Step 3: Build the frontend**
 
-Run: `cd frontend && npm run build`
+Run: `cd frontend && pnpm build`
 Expected: no errors.
 
 - [ ] **Step 4: Commit**
@@ -1729,7 +1744,7 @@ Add the import at the top: `import { useSession } from "@/lib/auth-client";`
 
 - [ ] **Step 3: Build**
 
-Run: `cd frontend && npm run build`
+Run: `cd frontend && pnpm build`
 Expected: no errors. If `authClient.admin.*` types aren't recognized, ensure the `adminClient()` plugin is registered in `auth-client.ts` (Task 14).
 
 - [ ] **Step 4: Commit**
@@ -1756,10 +1771,11 @@ git commit -m "add admin users section with role/ban/revoke/delete actions"
 # Stage 1: build the React frontend
 FROM node:20-alpine AS frontend-build
 WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm ci
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
-RUN npm run build
+RUN pnpm build
 # output: /app/dist
 
 # Stage 2: build the auth-service TS
@@ -1963,7 +1979,7 @@ Follow the steps in the spec (Configuration → Google Cloud OAuth Client). Put 
 Three terminals:
 1. `cd backend && air`
 2. `cd auth-service && pnpm dev`
-3. `cd frontend && npm run dev`
+3. `cd frontend && pnpm dev`
 
 - [ ] **Step 3: Run the four E2E paths**
 
