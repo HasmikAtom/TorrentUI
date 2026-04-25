@@ -1,6 +1,29 @@
 version: '3.8'
 
 services:
+  auth-service:
+    restart: always
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: torrent-auth-prod
+    environment:
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - BOOTSTRAP_ADMIN_EMAILS=${BOOTSTRAP_ADMIN_EMAILS}
+      - GO_BACKEND_URL=http://backend:8080
+      - DATABASE_PATH=/data/auth.sqlite
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    depends_on:
+      - backend
+
   backend:
     restart: always
     build:
@@ -12,25 +35,12 @@ services:
       - TRANSMISSION_PORT=${PROD_TRANSMISSION_PORT}
       - TRANSMISSION_USERNAME=${PROD_TRANSMISSION_USERNAME}
       - TRANSMISSION_PASSWORD=${PROD_TRANSMISSION_PASSWORD}
-    ports:
-      - "${PROD_APP_PORT}:${PROD_APP_PORT}"
+    expose:
+      - "8080"
     volumes:
       - /:/hostfs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  frontend:
-    restart: always
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: torrent-frontend-prod
-    environment:
-      - REACT_APP_API_URL=${REACT_APP_API_URL}
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
 
 networks:
   default:
