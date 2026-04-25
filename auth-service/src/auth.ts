@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { admin } from "better-auth/plugins";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { db, bootstrapAdmins } from "./db.js";
 
 export async function beforeUserCreate(user: {
@@ -49,6 +49,25 @@ export const auth = betterAuth({
 
   databaseHooks: {
     user: { create: { before: beforeUserCreate } },
+  },
+
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      // Only target admin-plugin endpoints
+      if (!ctx.path.startsWith("/admin/")) return;
+
+      const session = ctx.context.session;
+      if (!session) return; // unauthenticated requests are rejected elsewhere
+
+      const targetId =
+        (ctx.body as { userId?: string } | undefined)?.userId ??
+        (ctx.params as { id?: string } | undefined)?.id ??
+        null;
+
+      if (targetId && targetId === session.user.id) {
+        throw new APIError("BAD_REQUEST", { message: "cannot modify yourself" });
+      }
+    }),
   },
 
   session: {
