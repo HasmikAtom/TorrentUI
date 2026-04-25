@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { admin } from "better-auth/plugins";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { db, bootstrapAdmins } from "./db.js";
 
 export async function beforeUserCreate(user: {
@@ -56,8 +56,8 @@ export const auth = betterAuth({
       // Only target admin-plugin endpoints
       if (!ctx.path.startsWith("/admin/")) return;
 
-      const session = ctx.context.session;
-      if (!session) return; // unauthenticated requests are rejected elsewhere
+      const session = await getSessionFromCtx(ctx);
+      if (!session) return; // admin plugin's own middleware will return 401
 
       const targetId =
         (ctx.body as { userId?: string } | undefined)?.userId ??
