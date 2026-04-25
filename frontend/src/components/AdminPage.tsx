@@ -7,6 +7,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { apiFetch } from "@/services";
+import { authClient, useSession } from "@/lib/auth-client";
 
 type Invite = { email: string; invited_by: string | null; created_at: number };
 
@@ -115,11 +116,127 @@ function RemoveDialog({
   );
 }
 
+type AdminUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+  role?: string | null;
+  banned?: boolean | null;
+  createdAt: string | Date;
+};
+
+function UsersSection({ currentUserId }: { currentUserId: string }) {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function load() {
+    const res = await authClient.admin.listUsers({ query: { limit: 100 } });
+    if (res.data) setUsers(res.data.users as AdminUser[]);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function setRole(userId: string, role: "admin" | "user") {
+    setBusyId(userId);
+    try { await authClient.admin.setRole({ userId, role }); await load(); }
+    finally { setBusyId(null); }
+  }
+
+  async function ban(userId: string) {
+    setBusyId(userId);
+    try { await authClient.admin.banUser({ userId }); await load(); }
+    finally { setBusyId(null); }
+  }
+
+  async function unban(userId: string) {
+    setBusyId(userId);
+    try { await authClient.admin.unbanUser({ userId }); await load(); }
+    finally { setBusyId(null); }
+  }
+
+  async function revoke(userId: string) {
+    setBusyId(userId);
+    try { await authClient.admin.revokeUserSessions({ userId }); }
+    finally { setBusyId(null); }
+  }
+
+  async function remove(userId: string) {
+    setBusyId(userId);
+    try { await authClient.admin.removeUser({ userId }); await load(); }
+    finally { setBusyId(null); }
+  }
+
+  return (
+    <section className="space-y-4">
+      <h2 className="text-lg font-semibold">Users</h2>
+      <table className="w-full text-sm">
+        <thead className="text-left text-muted-foreground">
+          <tr>
+            <th className="py-2">Email</th><th>Name</th><th>Role</th>
+            <th>Banned?</th><th>Created</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((u) => {
+            const self = u.id === currentUserId;
+            return (
+              <tr key={u.id} className="border-t">
+                <td className="py-2">{u.email}</td>
+                <td>{u.name ?? "—"}</td>
+                <td>{u.role ?? "user"}</td>
+                <td>{u.banned ? "yes" : "no"}</td>
+                <td>{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td className="text-right space-x-2">
+                  {!self && u.role !== "admin" && (
+                    <Button size="sm" variant="ghost"
+                      onClick={() => setRole(u.id, "admin")} disabled={busyId === u.id}>
+                      Promote
+                    </Button>
+                  )}
+                  {!self && u.role === "admin" && (
+                    <Button size="sm" variant="ghost"
+                      onClick={() => setRole(u.id, "user")} disabled={busyId === u.id}>
+                      Demote
+                    </Button>
+                  )}
+                  {!self && !u.banned && (
+                    <Button size="sm" variant="ghost"
+                      onClick={() => ban(u.id)} disabled={busyId === u.id}>Ban</Button>
+                  )}
+                  {!self && u.banned && (
+                    <Button size="sm" variant="ghost"
+                      onClick={() => unban(u.id)} disabled={busyId === u.id}>Unban</Button>
+                  )}
+                  {!self && (
+                    <>
+                      <Button size="sm" variant="ghost"
+                        onClick={() => revoke(u.id)} disabled={busyId === u.id}>
+                        Revoke sessions
+                      </Button>
+                      <Button size="sm" variant="ghost"
+                        onClick={() => remove(u.id)} disabled={busyId === u.id}>
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 export function AdminPage() {
+  const { data: session } = useSession();
+  if (!session) return null;
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8">
       <h1 className="text-2xl font-bold">Admin</h1>
       <AllowlistSection />
+      <UsersSection currentUserId={session.user.id} />
     </div>
   );
 }
