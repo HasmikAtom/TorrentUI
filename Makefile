@@ -1,4 +1,4 @@
-.PHONY: dev dev-build dev-down dev-logs dev-restart prod prod-build prod-down prod-logs prod-restart clean-dev clean-prod deploy-up deploy-build deploy-down deploy-logs
+.PHONY: dev dev-build dev-down dev-logs dev-restart prod prod-build prod-down prod-logs prod-restart clean-dev clean-prod deploy-up deploy-build deploy-down deploy-logs auth-dev auth-shell-db
 
 # Development
 dev:
@@ -47,6 +47,13 @@ deploy-down:
 
 deploy-logs:
 	docker compose -p torrent-deploy -f ../torrent-deploy/docker-compose.yml logs -f
+
+# Auth-service convenience
+auth-dev:
+	cd auth-service && pnpm dev
+
+auth-shell-db:
+	sqlite3 ./data/auth.sqlite
 
 # Cleanup
 clean-dev:
