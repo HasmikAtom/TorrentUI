@@ -77,7 +77,11 @@ export const auth = betterAuth({
   },
 
   advanced: {
-    defaultCookieAttributes: { sameSite: "lax", httpOnly: true, secure: true },
+    defaultCookieAttributes: {
+      sameSite: "lax",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    },
   },
 
   plugins: [admin({ defaultRole: "user", adminRoles: ["admin"] })],
