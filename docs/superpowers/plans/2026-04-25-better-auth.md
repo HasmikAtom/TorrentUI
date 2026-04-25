@@ -85,23 +85,24 @@ cd auth-service
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "node --test --import tsx src/__tests__/*.test.ts",
-    "migrate": "better-auth migrate --config src/auth.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "better-auth": "^1.6.9",
-    "better-sqlite3": "^11.5.0",
-    "hono": "^4.6.0",
-    "@hono/node-server": "^1.13.0"
+    "better-sqlite3": "^12.6.2",
+    "hono": "^4.12.12",
+    "@hono/node-server": "^1.19.14"
   },
   "devDependencies": {
-    "@better-auth/cli": "^1.6.9",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.0.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
-  "engines": { "node": ">=20" }
+  "engines": { "node": ">=20" },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
 }
 ```
 
@@ -147,7 +148,7 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 BOOTSTRAP_ADMIN_EMAILS=d.isayan@gmail.com,hasmikatomyan@gmail.com
 GO_BACKEND_URL=http://localhost:8085
-DATABASE_PATH=./data/auth.sqlite
+DATABASE_PATH=../data/auth.sqlite
 NODE_ENV=development
 PORT=3000
 ```
@@ -336,39 +337,50 @@ git commit -m "configure Better Auth with Google OAuth, allowlist hook, admin pl
 
 ---
 
-### Task 4: Generate Better Auth schema
+### Task 4: Set up local dev .env and verify programmatic migration
 
-**Files:** none — runs the CLI to mutate the SQLite file.
+**Note:** The published `@better-auth/cli` is frozen at v1.4.x and is incompatible with `better-auth@1.6.x` (peer-dep skew on `better-call`'s `kAPIErrorHeaderSymbol`). Better Auth's own e2e fixture uses the **programmatic migrator** instead (`getMigrations(auth.options).runMigrations()`). Task 10 will call this at server boot — there is no separate CLI step.
+
+**Files:** creates a local `auth-service/.env` (gitignored). No commits.
 
 - [ ] **Step 1: Set up an env file for local dev**
 
 ```bash
 cp auth-service/.env.example auth-service/.env
-# Set BETTER_AUTH_SECRET to a real value:
 sed -i.bak "s|<openssl rand -hex 32>|$(openssl rand -hex 32)|" auth-service/.env
 rm auth-service/.env.bak
 ```
 
-(Leave `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` empty for now — they're only needed for the actual sign-in flow.)
+(Leave `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` empty for now — only needed for the sign-in flow during E2E.)
 
-- [ ] **Step 2: Run the migrate CLI**
+- [ ] **Step 2: Smoke-test the programmatic migrator**
 
-Run:
+From `auth-service/`:
 ```bash
-cd auth-service
-pnpm exec @better-auth/cli@latest migrate --config src/auth.ts --y
+pnpm exec tsx -e "
+  import { getMigrations } from 'better-auth/db/migration';
+  import { auth } from './src/auth.js';
+  const { runMigrations } = await getMigrations(auth.options);
+  await runMigrations();
+  console.log('migrations OK');
+"
 ```
-Expected: prints "Migration complete." and creates `user`, `session`, `account`, `verification` tables in `data/auth.sqlite`.
 
-- [ ] **Step 3: Verify tables exist**
+(If `tsx -e` doesn't accept top-level await, drop the snippet into a temp file inside `auth-service/` instead — the package's `"type": "module"` makes ESM the default.)
 
-Run: `sqlite3 data/auth.sqlite ".tables"`
-Expected output: `account  invited_emails  session  user  verification`
-(`invited_emails` won't exist yet — it's created by `runOwnedMigrations()` at server startup, not by the CLI. Re-check after Task 10 when the server boots.)
+Expected: prints "migrations OK". Two warnings about missing `BETTER_AUTH_URL` / Google clientId/secret are fine — env isn't loaded by the smoke script.
 
-- [ ] **Step 4: Commit (no file changes — just confirms the migrate workflow)**
+- [ ] **Step 3: Verify tables**
 
-This task creates no committed artifacts. Verify the workflow works, then proceed.
+```bash
+sqlite3 data/auth.sqlite ".tables"
+```
+
+Expected: `account  session  user  verification`. (`invited_emails` shows up only after the server runs and `runOwnedMigrations()` fires — Task 10.)
+
+- [ ] **Step 4: No commit**
+
+Task 4 produces no committed artifacts. The Better Auth tables live in the gitignored `data/auth.sqlite`. Move on once you've confirmed the smoke test works.
 
 ---
 
@@ -863,6 +875,7 @@ git commit -m "add self-modify guard hook on admin plugin endpoints"
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { getMigrations } from "better-auth/db/migration";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -872,6 +885,11 @@ import { requireAuth, requireAdmin } from "./middleware.js";
 import { proxyToGo } from "./proxy.js";
 import { mountAdminRoutes } from "./admin-routes.js";
 
+// Migration order matters: Better Auth's own schema first (creates user,
+// session, account, verification), then our invited_emails, then reconcile
+// bootstrap admins (which UPDATEs the user table that step 1 just created).
+const { runMigrations } = await getMigrations(auth.options);
+await runMigrations();
 runOwnedMigrations();
 reconcileBootstrapAdmins();
 
@@ -1920,13 +1938,10 @@ In `frontend/vite.config.ts`, change the line that defaults `VITE_API_TARGET` fr
 
 Append to `Makefile`:
 ```makefile
-.PHONY: auth-dev auth-migrate auth-shell-db
+.PHONY: auth-dev auth-shell-db
 
 auth-dev:
 	cd auth-service && pnpm dev
-
-auth-migrate:
-	cd auth-service && pnpm exec @better-auth/cli@latest migrate --config src/auth.ts --y
 
 auth-shell-db:
 	sqlite3 ./data/auth.sqlite
@@ -2042,10 +2057,7 @@ make prod-build-deploy
 
 - [ ] **Step 4: Migrate prod DB**
 
-```bash
-docker exec -it torrentui-auth-service-1 \
-  pnpm exec @better-auth/cli@latest migrate --config src/auth.ts --y
-```
+No manual step needed — the auth-service container runs `getMigrations(auth.options).runMigrations()` at boot (Task 10's `server.ts`). On first start against an empty `/data` volume, all four Better Auth tables plus `invited_emails` are created automatically. Tail the container logs and confirm you see startup output without migration errors.
 
 - [ ] **Step 5: Repoint Cloudflare Tunnel**
 
