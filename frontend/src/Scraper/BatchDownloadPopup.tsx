@@ -7,6 +7,7 @@ import { DialogHeader, DialogFooter } from '../components/ui/dialog';
 import { MediaTypeSelector } from './MediaTypeSelector';
 import { PreparedTorrent, PreparedTorrentStatus, BatchPrepareResponse } from '../Models';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { apiFetch } from "@/services";
 
 interface Props {
   selectedCount: number;
@@ -49,7 +50,7 @@ export const BatchDownloadPopup: React.FC<Props> = ({
   const cancelPreparedTorrents = useCallback(async (torrentIds: number[]) => {
     if (torrentIds.length === 0) return;
     try {
-      await fetch('/api/download/cancel', {
+      await apiFetch('/api/download/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: torrentIds }),
@@ -61,7 +62,7 @@ export const BatchDownloadPopup: React.FC<Props> = ({
 
   const pollStatus = useCallback(async (torrentId: number) => {
     try {
-      const response = await fetch(`/api/download/prepare/status/${torrentId}`);
+      const response = await apiFetch(`/api/download/prepare/status/${torrentId}`);
       if (!response.ok) return;
 
       const status: PreparedTorrentStatus = await response.json();
@@ -101,7 +102,7 @@ export const BatchDownloadPopup: React.FC<Props> = ({
         ? { urls: downloadUrls }
         : { magnetLinks: downloadUrls };
 
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -207,7 +208,7 @@ export const BatchDownloadPopup: React.FC<Props> = ({
 
     setDownloading(true);
     try {
-      const response = await fetch('/api/download/finalize', {
+      const response = await apiFetch('/api/download/finalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

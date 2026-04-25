@@ -6,6 +6,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, D
 import { DialogHeader, DialogFooter } from '../components/ui/dialog';
 import { MediaTypeSelector } from './MediaTypeSelector';
 import { PreparedTorrent, PreparedTorrentStatus } from '../Models';
+import { apiFetch } from "@/services";
 
 interface Props {
   downloadUrl: string;
@@ -43,7 +44,7 @@ export const TorrentDownloadPopup: React.FC<Props> = ({
 
   const cancelPreparedTorrent = useCallback(async (torrentId: number) => {
     try {
-      await fetch('/api/download/cancel', {
+      await apiFetch('/api/download/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: [torrentId] }),
@@ -55,7 +56,7 @@ export const TorrentDownloadPopup: React.FC<Props> = ({
 
   const pollStatus = useCallback(async (torrentId: number) => {
     try {
-      const response = await fetch(`/api/download/prepare/status/${torrentId}`);
+      const response = await apiFetch(`/api/download/prepare/status/${torrentId}`);
       if (!response.ok) return;
 
       const status: PreparedTorrentStatus = await response.json();
@@ -84,7 +85,7 @@ export const TorrentDownloadPopup: React.FC<Props> = ({
       }
 
       const endpoint = isRuTracker ? '/api/download/file/prepare' : '/api/download/prepare';
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method: 'POST',
         body: formData,
         signal: abortControllerRef.current.signal,
@@ -149,7 +150,7 @@ export const TorrentDownloadPopup: React.FC<Props> = ({
 
     setDownloading(true);
     try {
-      const response = await fetch('/api/download/finalize', {
+      const response = await apiFetch('/api/download/finalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

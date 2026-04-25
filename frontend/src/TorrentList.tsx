@@ -12,6 +12,7 @@ import {
 import { RefreshCw, X, Trash2, Pencil, Check } from "lucide-react";
 import { TorrentStatus } from "./Models";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/services";
 
 const POLL_INTERVAL = 3000;
 const BYTES_PER_MB = 1024 * 1024;
@@ -40,7 +41,7 @@ export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
 
     const fetchTorrents = useCallback(async (showError = false) => {
       try {
-        const response = await fetch(`/api/torrents`);
+        const response = await apiFetch(`/api/torrents`);
         const data = await response.json();
         if (response.ok) {
           setTorrents(data);
@@ -70,7 +71,7 @@ export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
 
     const handleDelete = async (id: number, deleteData: boolean) => {
       try {
-        const response = await fetch(`/api/torrents/${id}?deleteData=${deleteData}`, {
+        const response = await apiFetch(`/api/torrents/${id}?deleteData=${deleteData}`, {
           method: 'DELETE',
         });
         if (response.ok) {
@@ -121,7 +122,7 @@ export const TorrentList: React.FC<Props> = React.memo(({ refreshTrigger }) => {
         return;
       }
       try {
-        const response = await fetch(`/api/torrents/${id}/rename`, {
+        const response = await apiFetch(`/api/torrents/${id}/rename`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: trimmed }),
