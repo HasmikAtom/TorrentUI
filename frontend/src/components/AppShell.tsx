@@ -1,13 +1,18 @@
 import { Link } from "react-router-dom";
+import { Sun, Moon, Monitor } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "@/components/ThemeProvider";
 import Logo from "@/assets/herxagon-logo.svg";
 
 type User = {
@@ -19,6 +24,8 @@ type User = {
 };
 
 export function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b px-4 py-3 flex items-center justify-between">
@@ -33,8 +40,6 @@ export function AppShell({ user, children }: { user: User; children: React.React
             </Link>
           )}
 
-          <ThemeToggle />
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-2">
@@ -45,6 +50,27 @@ export function AppShell({ user, children }: { user: User; children: React.React
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Theme
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={theme}
+                onValueChange={(value) => setTheme(value as "dark" | "light" | "system")}
+              >
+                <DropdownMenuRadioItem value="light">
+                  <Sun className="mr-2 h-4 w-4" />
+                  Light
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">
+                  <Moon className="mr-2 h-4 w-4" />
+                  Dark
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">
+                  <Monitor className="mr-2 h-4 w-4" />
+                  System
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => signOut()}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
