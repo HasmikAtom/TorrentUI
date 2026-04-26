@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HardDrive } from 'lucide-react';
+import { apiFetch } from "@/services";
 
 interface StorageData {
   name: string;
@@ -78,7 +79,7 @@ export const StorageInfo: React.FC = () => {
 
   const fetchStorageInfo = useCallback(async () => {
     try {
-      const response = await fetch('/api/storage');
+      const response = await apiFetch('/api/storage');
       if (response.ok) {
         const data = await response.json();
         setStorages(data || []);

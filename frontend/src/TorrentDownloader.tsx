@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { MediaTypeSelector } from './Scraper/MediaTypeSelector';
 import { PreparedTorrent, PreparedTorrentStatus } from './Models';
+import { apiFetch } from "@/services";
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
@@ -51,7 +52,7 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
 
   const cancelPreparedTorrent = useCallback(async (torrentId: number) => {
     try {
-      await fetch('/api/download/cancel', {
+      await apiFetch('/api/download/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: [torrentId] }),
@@ -83,7 +84,7 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
 
   const pollStatus = useCallback(async (torrentId: number) => {
     try {
-      const response = await fetch(`/api/download/prepare/status/${torrentId}`);
+      const response = await apiFetch(`/api/download/prepare/status/${torrentId}`);
       if (!response.ok) return;
 
       const status: PreparedTorrentStatus = await response.json();
@@ -112,7 +113,7 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
         formData.append('torrentFile', torrentFile);
       }
 
-      const response = await fetch('/api/download/prepare', {
+      const response = await apiFetch('/api/download/prepare', {
         method: 'POST',
         body: formData,
         signal: abortControllerRef.current.signal,
@@ -179,7 +180,7 @@ export const TorrentDownloader: React.FC<Props> = ({ onDownloadComplete }) => {
 
     setDownloading(true);
     try {
-      const response = await fetch('/api/download/finalize', {
+      const response = await apiFetch('/api/download/finalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

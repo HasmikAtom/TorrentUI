@@ -1,0 +1,8 @@
+FROM node:20-alpine
+WORKDIR /app
+RUN corepack enable
+COPY auth-service/package.json auth-service/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY auth-service/ ./
+EXPOSE 3000
+CMD ["pnpm", "dev"]

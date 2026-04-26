@@ -1,0 +1,25 @@
+# Don't copy host-built node_modules into images — they're macOS binaries
+# that break native modules (better-sqlite3) inside Linux containers.
+**/node_modules
+
+# Build outputs
+**/dist
+**/build
+**/.next
+backend/tmp/
+
+# Local env / git
+.env
+.env.local
+.env.*
+!.env.example
+.git
+.gitignore
+
+# Editor / OS
+.DS_Store
+.vscode
+.idea
+
+# Docs / misc
+*.md

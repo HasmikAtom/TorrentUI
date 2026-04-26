@@ -1,6 +1,30 @@
 version: '3.8'
 
 services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile.dev
+    container_name: torrent-auth-dev
+    environment:
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-dev-only-secret-change-me-dev-only-secret}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:5173}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - BOOTSTRAP_ADMIN_EMAILS=${BOOTSTRAP_ADMIN_EMAILS:-}
+      - GO_BACKEND_URL=http://backend-dev:8080
+      - DATABASE_PATH=/data/auth.sqlite
+      - NODE_ENV=development
+      - PORT=3000
+    expose:
+      - "3000"
+    volumes:
+      - ./auth-service:/app
+      - /app/node_modules
+      - ./data:/data
+    depends_on:
+      - backend-dev
+
   backend-dev:
     build:
       context: ./backend
@@ -11,8 +35,8 @@ services:
       - TRANSMISSION_PORT=${DEV_TRANSMISSION_PORT:-9091}
       - TRANSMISSION_USERNAME=${DEV_TRANSMISSION_USERNAME:-}
       - TRANSMISSION_PASSWORD=${DEV_TRANSMISSION_PASSWORD:-}
-    ports:
-      - "8081:8080"
+    expose:
+      - "8080"
     volumes:
       - ./backend:/app
       - /:/hostfs:ro
@@ -25,14 +49,14 @@ services:
       dockerfile: Dockerfile.dev
     container_name: torrent-frontend-dev
     environment:
-      - VITE_API_TARGET=http://backend-dev:8080/
+      - VITE_API_TARGET=http://auth-service:3000/
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
-      - backend-dev
+      - auth-service
 
 networks:
   default:

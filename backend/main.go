@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/hasmikatom/torrent/middleware"
 	"github.com/hasmikatom/torrent/scraper"
 	"github.com/hasmikatom/torrent/transmission"
 	"github.com/joho/godotenv"
@@ -52,37 +53,36 @@ func main() {
 
 	r.Use(cors.New(config))
 
-	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	r.POST("/download", handleDownload)
-	r.POST("/download/file", handleFileDownload)
-	r.POST("/download/batch", handleBatchDownload)
-	r.POST("/download/file/batch", handleBatchFileDownload)
+	api := r.Group("/", middleware.RequireUser())
+	{
+		api.POST("/download", handleDownload)
+		api.POST("/download/file", handleFileDownload)
+		api.POST("/download/batch", handleBatchDownload)
+		api.POST("/download/file/batch", handleBatchFileDownload)
 
-	// Prepare/finalize endpoints for name editing flow
-	r.POST("/download/prepare", handlePrepareDownload)
-	r.POST("/download/file/prepare", handleFilePrepareDownload)
-	r.POST("/download/prepare/batch", handleBatchPrepareDownload)
-	r.POST("/download/file/prepare/batch", handleBatchFilePrepareDownload)
-	r.GET("/download/prepare/status/:id", handlePrepareStatus)
-	r.POST("/download/finalize", handleFinalizeDownload)
-	r.POST("/download/cancel", handleCancelDownload)
-	r.GET("/status/:id", getTorrentStatus)
-	r.GET("/torrents", listTorrents)
-	r.DELETE("/torrents/:id", deleteTorrent)
-	r.PUT("/torrents/:id/rename", renameTorrent)
-	r.GET("/storage", getStorageInfo)
+		api.POST("/download/prepare", handlePrepareDownload)
+		api.POST("/download/file/prepare", handleFilePrepareDownload)
+		api.POST("/download/prepare/batch", handleBatchPrepareDownload)
+		api.POST("/download/file/prepare/batch", handleBatchFilePrepareDownload)
+		api.GET("/download/prepare/status/:id", handlePrepareStatus)
+		api.POST("/download/finalize", handleFinalizeDownload)
+		api.POST("/download/cancel", handleCancelDownload)
+		api.GET("/status/:id", getTorrentStatus)
+		api.GET("/torrents", listTorrents)
+		api.DELETE("/torrents/:id", deleteTorrent)
+		api.PUT("/torrents/:id/rename", renameTorrent)
+		api.GET("/storage", getStorageInfo)
 
-	r.POST("/scrape/piratebay/:name", scrapePirateBay)
-	r.POST("/scrape/rutracker/:name", scrapeRuTracker)
-
-	// SSE endpoints for real-time scrape progress
-	r.GET("/scrape/piratebay/:name/stream", scrapePirateBaySSE)
-	r.GET("/scrape/rutracker/:name/stream", scrapeRuTrackerSSE)
-	r.GET("/scrape/sources", getScraperSources)
+		api.POST("/scrape/piratebay/:name", scrapePirateBay)
+		api.POST("/scrape/rutracker/:name", scrapeRuTracker)
+		api.GET("/scrape/piratebay/:name/stream", scrapePirateBaySSE)
+		api.GET("/scrape/rutracker/:name/stream", scrapeRuTrackerSSE)
+		api.GET("/scrape/sources", getScraperSources)
+	}
 
 	// Create server with graceful shutdown
 	srv := &http.Server{
