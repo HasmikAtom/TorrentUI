@@ -18,7 +18,7 @@ Plex integration needs per-user tokens and config. Hardcoding credentials in `.e
 
 ## Data Model
 
-Go backend gets a new SQLite database at `data/connectors.sqlite`. Migration runs at startup (`CREATE TABLE IF NOT EXISTS`).
+Go backend gets a new SQLite database at `data/backend.sqlite`. Migration runs at startup (`CREATE TABLE IF NOT EXISTS`).
 
 ```sql
 CREATE TABLE user_integrations (
@@ -39,7 +39,7 @@ CREATE TABLE user_integrations (
 ### SQLite Setup
 
 - Dependency: `modernc.org/sqlite` (pure Go, no CGO)
-- DB path: `data/connectors.sqlite` (bind-mounted in Docker like auth's `data/auth.sqlite`)
+- DB path: `data/backend.sqlite` (bind-mounted in Docker like auth's `data/auth.sqlite`)
 - Migrations run at startup, same `CREATE TABLE IF NOT EXISTS` pattern as auth-service
 
 ### API Routes
