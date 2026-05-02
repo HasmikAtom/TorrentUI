@@ -12,6 +12,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/hasmikatom/torrent/db"
+	"github.com/hasmikatom/torrent/integrations"
 	"github.com/hasmikatom/torrent/middleware"
 	"github.com/hasmikatom/torrent/scraper"
 	"github.com/hasmikatom/torrent/transmission"
@@ -20,6 +22,7 @@ import (
 
 var c *Config
 var client *transmission.TransmissionRPC
+var backendDB *db.Database
 
 func init() {
 	godotenv.Load()
@@ -41,6 +44,16 @@ func init() {
 
 	// Load scraper config
 	scraper.LoadScraperConfig()
+
+	var err error
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = "./data/backend.sqlite"
+	}
+	backendDB, err = db.Open(dbPath)
+	if err != nil {
+		log.Fatalf("Failed to open database: %v", err)
+	}
 }
 
 func main() {
@@ -84,6 +97,9 @@ func main() {
 		api.GET("/scrape/sources", getScraperSources)
 	}
 
+	intStore := integrations.NewStore(backendDB)
+	integrations.RegisterHandlers(api, intStore, "")
+
 	// Create server with graceful shutdown
 	srv := &http.Server{
 		Addr:    ":" + c.AppPort,
@@ -103,6 +119,10 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
+	if backendDB != nil {
+		backendDB.Close()
+	}
 
 	log.Println("Shutting down server...")
 

@@ -6,16 +6,12 @@ services:
       context: .
       dockerfile: auth-service/Dockerfile.dev
     container_name: torrent-auth-dev
+    env_file:
+      - auth-service/.env
     environment:
-      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-dev-only-secret-change-me-dev-only-secret}
-      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:5173}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-      - BOOTSTRAP_ADMIN_EMAILS=${BOOTSTRAP_ADMIN_EMAILS:-}
+      - BETTER_AUTH_URL=http://localhost:5173
       - GO_BACKEND_URL=http://backend-dev:8080
       - DATABASE_PATH=/data/auth.sqlite
-      - NODE_ENV=development
-      - PORT=3000
     expose:
       - "3000"
     volumes:
@@ -35,11 +31,13 @@ services:
       - TRANSMISSION_PORT=${DEV_TRANSMISSION_PORT:-9091}
       - TRANSMISSION_USERNAME=${DEV_TRANSMISSION_USERNAME:-}
       - TRANSMISSION_PASSWORD=${DEV_TRANSMISSION_PASSWORD:-}
+      - DATABASE_PATH=/data/backend.sqlite
     expose:
       - "8080"
     volumes:
       - ./backend:/app
       - /:/hostfs:ro
+      - ./data:/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
