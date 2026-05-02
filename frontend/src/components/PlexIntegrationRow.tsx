@@ -154,8 +154,8 @@ export function PlexIntegrationRow({ enabled, hasToken, onUpdate }: Props) {
               )}
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Find your token at plex.tv — go to Settings → Devices, click a
-              device, and look for the token in the XML URL.
+              Open app.plex.tv, press F12 → Network tab, browse any content,
+              then look for X-Plex-Token in any request URL.
             </p>
           </div>
         </div>
