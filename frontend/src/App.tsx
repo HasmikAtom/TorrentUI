@@ -4,6 +4,7 @@ import { LoginScreen } from "@/components/LoginScreen";
 import { AppShell } from "@/components/AppShell";
 import { Home } from "@/components/Home";
 import { AdminPage } from "@/components/AdminPage";
+import { IntegrationsPage } from "@/components/IntegrationsPage";
 
 export default function App() {
   const { data: session, isPending } = useSession();
@@ -30,6 +31,7 @@ export default function App() {
                 : <Navigate to="/" replace />
             }
           />
+          <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>

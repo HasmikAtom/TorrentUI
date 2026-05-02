@@ -1,4 +1,5 @@
-import { Sun, Moon, Monitor, LogOut, ChevronsUpDown } from "lucide-react";
+import { Sun, Moon, Monitor, LogOut, ChevronsUpDown, Plug } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { signOut } from "@/lib/auth-client";
 import {
   SidebarMenu,
@@ -75,6 +76,7 @@ function ThemeSubmenu() {
 
 export function NavUser({ user }: { user: User }) {
   const displayName = user.name ?? user.email;
+  const navigate = useNavigate();
 
   return (
     <SidebarMenu>
@@ -98,6 +100,10 @@ export function NavUser({ user }: { user: User }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="end" className="w-56">
             <ThemeSubmenu />
+            <DropdownMenuItem onSelect={() => navigate("/integrations")}>
+              <Plug className="mr-2 h-4 w-4" />
+              Integrations
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => signOut()}>
               <LogOut className="mr-2 h-4 w-4" />
