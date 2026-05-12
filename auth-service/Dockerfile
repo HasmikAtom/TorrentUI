@@ -1,5 +1,5 @@
 # Stage 1: build the React frontend
-FROM node:20-alpine AS frontend-build
+FROM node:22-alpine AS frontend-build
 WORKDIR /app
 RUN corepack enable
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
@@ -9,7 +9,7 @@ RUN pnpm build
 # output: /app/dist
 
 # Stage 2: build the auth-service TS
-FROM node:20-alpine AS service-build
+FROM node:22-alpine AS service-build
 WORKDIR /app
 RUN corepack enable
 COPY auth-service/package.json auth-service/pnpm-lock.yaml ./
@@ -18,7 +18,7 @@ COPY auth-service/ ./
 RUN pnpm build
 
 # Stage 3: runtime
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 RUN corepack enable
 COPY auth-service/package.json auth-service/pnpm-lock.yaml ./
