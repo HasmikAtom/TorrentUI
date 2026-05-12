@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { Home } from "@/components/Home";
 import { AdminPage } from "@/components/AdminPage";
 import { IntegrationsPage } from "@/components/IntegrationsPage";
+import { MoviesPage } from "@/components/movies/MoviesPage";
 
 export default function App() {
   const { data: session, isPending } = useSession();
@@ -32,6 +33,7 @@ export default function App() {
             }
           />
           <Route path="/integrations" element={<IntegrationsPage />} />
+          <Route path="/movies" element={<MoviesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>

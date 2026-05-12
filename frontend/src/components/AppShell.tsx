@@ -1,6 +1,7 @@
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
+import { useIntegrations } from "@/hooks/useIntegrations";
 
 type User = {
   id: string;
@@ -11,9 +12,12 @@ type User = {
 };
 
 export function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
+  const { state: integrations } = useIntegrations();
+  const plexConnected = integrations.plexEnabled && integrations.plexHasToken;
+
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
+      <AppSidebar user={user} plexEnabled={plexConnected} />
       <SidebarInset>
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

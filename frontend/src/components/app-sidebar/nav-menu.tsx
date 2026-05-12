@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Shield, type LucideIcon } from "lucide-react";
+import { Home, Shield, Film, type LucideIcon } from "lucide-react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -19,13 +19,17 @@ const BASE_ITEMS: NavItem[] = [
   { title: "Home", icon: Home, href: "/" },
 ];
 
+const MOVIES_ITEM: NavItem = { title: "Movies", icon: Film, href: "/movies" };
+
 const ADMIN_ITEMS: NavItem[] = [
   { title: "Admin", icon: Shield, href: "/admin" },
 ];
 
-export function NavMenu({ isAdmin }: { isAdmin: boolean }) {
+export function NavMenu({ isAdmin, plexEnabled }: { isAdmin: boolean; plexEnabled: boolean }) {
   const location = useLocation();
-  const items = isAdmin ? [...BASE_ITEMS, ...ADMIN_ITEMS] : BASE_ITEMS;
+  const items: NavItem[] = [...BASE_ITEMS];
+  if (plexEnabled) items.push(MOVIES_ITEM);
+  if (isAdmin) items.push(...ADMIN_ITEMS);
 
   return (
     <SidebarGroup>

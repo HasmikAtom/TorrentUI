@@ -15,6 +15,7 @@ import (
 	"github.com/hasmikatom/torrent/db"
 	"github.com/hasmikatom/torrent/integrations"
 	"github.com/hasmikatom/torrent/middleware"
+	"github.com/hasmikatom/torrent/plex"
 	"github.com/hasmikatom/torrent/scraper"
 	"github.com/hasmikatom/torrent/transmission"
 	"github.com/joho/godotenv"
@@ -98,7 +99,9 @@ func main() {
 	}
 
 	intStore := integrations.NewStore(backendDB)
-	integrations.RegisterHandlers(api, intStore, "")
+	plexClient := plex.New(&http.Client{Timeout: 15 * time.Second})
+	plex.RegisterHandlers(api, intStore, plexClient)
+	integrations.RegisterHandlers(api, intStore, "", plexClient.InvalidateServer)
 
 	// Create server with graceful shutdown
 	srv := &http.Server{

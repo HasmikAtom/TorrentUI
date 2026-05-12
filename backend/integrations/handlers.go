@@ -11,7 +11,7 @@ type plexRequest struct {
 	Enabled *bool   `json:"enabled"`
 }
 
-func RegisterHandlers(g *gin.RouterGroup, store *Store, plexAPIURL string) {
+func RegisterHandlers(g *gin.RouterGroup, store *Store, plexAPIURL string, onTokenChange func(userID string)) {
 	g.GET("/integrations", func(c *gin.Context) {
 		userID := c.GetString("userId")
 		row, err := store.GetIntegrations(userID)
@@ -39,6 +39,9 @@ func RegisterHandlers(g *gin.RouterGroup, store *Store, plexAPIURL string) {
 			if err := store.SetPlexEnabled(userID, *req.Enabled); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update"})
 				return
+			}
+			if onTokenChange != nil {
+				onTokenChange(userID)
 			}
 			row, _ := store.GetIntegrations(userID)
 			c.JSON(http.StatusOK, gin.H{
@@ -73,6 +76,9 @@ func RegisterHandlers(g *gin.RouterGroup, store *Store, plexAPIURL string) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save"})
 			return
 		}
+		if onTokenChange != nil {
+			onTokenChange(userID)
+		}
 
 		row, _ := store.GetIntegrations(userID)
 		c.JSON(http.StatusOK, gin.H{
@@ -87,6 +93,9 @@ func RegisterHandlers(g *gin.RouterGroup, store *Store, plexAPIURL string) {
 		if err := store.DeletePlex(userID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete"})
 			return
+		}
+		if onTokenChange != nil {
+			onTokenChange(userID)
 		}
 		c.Status(http.StatusNoContent)
 	})
