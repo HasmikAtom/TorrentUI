@@ -243,3 +243,81 @@ func TestListMovies_MultiLibrary_PastEnd(t *testing.T) {
 		t.Errorf("items: got %d, want 0", len(res.Items))
 	}
 }
+
+const movieDetailFixture = `{
+  "MediaContainer": {
+    "Metadata": [{
+      "ratingKey": "42",
+      "title": "Detail Movie",
+      "year": 2024,
+      "thumb": "/library/metadata/42/thumb/1",
+      "summary": "summary text",
+      "duration": 7200000,
+      "contentRating": "PG-13",
+      "studio": "Studio X",
+      "originallyAvailableAt": "2024-01-15",
+      "Genre":    [{"tag":"Action"},{"tag":"Drama"}],
+      "Director": [{"tag":"Jane Doe"}],
+      "Writer":   [{"tag":"John Smith"}],
+      "Role": [
+        {"tag":"Actor 1"},{"tag":"Actor 2"},{"tag":"Actor 3"},
+        {"tag":"Actor 4"},{"tag":"Actor 5"},{"tag":"Actor 6"},
+        {"tag":"Actor 7"}
+      ]
+    }]
+  }
+}`
+
+func TestGetMovie_ParsesDetail(t *testing.T) {
+	pms := fakePMS(t, map[string]func(w http.ResponseWriter, r *http.Request){
+		"/library/metadata/42": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("X-Plex-Token") != "tok" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(movieDetailFixture))
+		},
+	})
+	defer pms.Close()
+
+	client := newClient(http.DefaultClient)
+	conn := ServerConn{BaseURL: pms.URL, ResolvedAt: time.Now()}
+
+	d, err := client.GetMovie(conn, "tok", "42")
+	if err != nil {
+		t.Fatalf("GetMovie: %v", err)
+	}
+	if d.RatingKey != "42" || d.Title != "Detail Movie" {
+		t.Errorf("basic fields: got %+v", d.Movie)
+	}
+	if len(d.Genres) != 2 || d.Genres[0] != "Action" {
+		t.Errorf("genres: got %v", d.Genres)
+	}
+	if len(d.Directors) != 1 || d.Directors[0] != "Jane Doe" {
+		t.Errorf("directors: got %v", d.Directors)
+	}
+	if len(d.Cast) != 6 {
+		t.Errorf("cast: got %d entries, want top 6", len(d.Cast))
+	}
+	if d.ContentRating != "PG-13" || d.Studio != "Studio X" || d.OriginallyAvailableAt != "2024-01-15" {
+		t.Errorf("extras: got %+v", d)
+	}
+}
+
+func TestGetMovie_NotFound(t *testing.T) {
+	pms := fakePMS(t, map[string]func(w http.ResponseWriter, r *http.Request){
+		"/library/metadata/999": func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		},
+	})
+	defer pms.Close()
+
+	client := newClient(http.DefaultClient)
+	conn := ServerConn{BaseURL: pms.URL, ResolvedAt: time.Now()}
+
+	_, err := client.GetMovie(conn, "tok", "999")
+	if err != ErrServerUnreachable {
+		t.Fatalf("got %v, want ErrServerUnreachable", err)
+	}
+}

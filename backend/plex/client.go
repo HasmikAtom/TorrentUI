@@ -254,6 +254,42 @@ func (c *PlexClient) getJSON(endpoint, token string, query url.Values, out inter
 	return nil
 }
 
+// GetMovie returns the detail for a single movie by rating key.
+func (c *PlexClient) GetMovie(conn ServerConn, token, ratingKey string) (MovieDetail, error) {
+	var resp sectionsResponse
+	endpoint := fmt.Sprintf("%s/library/metadata/%s", conn.BaseURL, ratingKey)
+	if err := c.getJSON(endpoint, token, nil, &resp); err != nil {
+		return MovieDetail{}, err
+	}
+	if len(resp.MediaContainer.Metadata) == 0 {
+		return MovieDetail{}, ErrServerUnreachable
+	}
+	m := resp.MediaContainer.Metadata[0]
+
+	d := MovieDetail{
+		Movie:                 toMovie(m),
+		ContentRating:         m.ContentRating,
+		Studio:                m.Studio,
+		OriginallyAvailableAt: m.OriginallyAt,
+		Genres:                tagsOf(m.Genre),
+		Directors:             tagsOf(m.Director),
+		Writers:               tagsOf(m.Writer),
+		Cast:                  tagsOf(m.Role),
+	}
+	if len(d.Cast) > 6 {
+		d.Cast = d.Cast[:6]
+	}
+	return d, nil
+}
+
+func tagsOf(in []taggedEntry) []string {
+	out := make([]string, 0, len(in))
+	for _, t := range in {
+		out = append(out, t.Tag)
+	}
+	return out
+}
+
 func toMovie(m metadataEntry) Movie {
 	return Movie{
 		RatingKey:      m.RatingKey,
