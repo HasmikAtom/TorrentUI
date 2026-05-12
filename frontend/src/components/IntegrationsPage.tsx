@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/services";
 import { PlexIntegrationRow } from "./PlexIntegrationRow";
+import { refreshIntegrations } from "@/hooks/useIntegrations";
 
 type IntegrationState = {
   plexEnabled: boolean;
@@ -17,6 +18,7 @@ export function IntegrationsPage() {
       setState(await res.json());
     }
     setLoading(false);
+    refreshIntegrations();
   }
 
   useEffect(() => {
