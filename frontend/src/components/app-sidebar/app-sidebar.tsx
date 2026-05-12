@@ -21,7 +21,7 @@ type User = {
   role?: string | null;
 };
 
-export function AppSidebar({ user }: { user: User }) {
+export function AppSidebar({ user, plexEnabled }: { user: User; plexEnabled: boolean }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -40,7 +40,7 @@ export function AppSidebar({ user }: { user: User }) {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMenu isAdmin={user.role === "admin"} />
+        <NavMenu isAdmin={user.role === "admin"} plexEnabled={plexEnabled} />
       </SidebarContent>
 
       <SidebarFooter>
