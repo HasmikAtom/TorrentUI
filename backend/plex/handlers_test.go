@@ -255,7 +255,7 @@ func TestImageHandler_ProxiesBytes(t *testing.T) {
 	if w.Header().Get("Content-Type") != "image/jpeg" {
 		t.Errorf("content-type: got %q", w.Header().Get("Content-Type"))
 	}
-	if w.Header().Get("Cache-Control") != "public, max-age=86400" {
+	if w.Header().Get("Cache-Control") != "private, max-age=86400" {
 		t.Errorf("cache-control: got %q", w.Header().Get("Cache-Control"))
 	}
 	if fc.lastImagePath != "/library/metadata/10/thumb/1" {

@@ -99,10 +99,9 @@ func main() {
 	}
 
 	intStore := integrations.NewStore(backendDB)
-	integrations.RegisterHandlers(api, intStore, "")
-
 	plexClient := plex.New(&http.Client{Timeout: 15 * time.Second})
 	plex.RegisterHandlers(api, intStore, plexClient)
+	integrations.RegisterHandlers(api, intStore, "", plexClient.InvalidateServer)
 
 	// Create server with graceful shutdown
 	srv := &http.Server{

@@ -18,13 +18,17 @@ const subscribers = new Set<(s: IntegrationState) => void>();
 async function load(): Promise<IntegrationState> {
   if (cached) return cached;
   if (!inFlight) {
-    inFlight = apiFetch("/api/integrations").then(async (res) => {
-      if (!res.ok) return defaultState;
-      const data = (await res.json()) as IntegrationState;
-      cached = data;
-      subscribers.forEach((cb) => cb(data));
-      return data;
-    });
+    inFlight = apiFetch("/api/integrations")
+      .then(async (res) => {
+        if (!res.ok) return defaultState;
+        const data = (await res.json()) as IntegrationState;
+        cached = data;
+        subscribers.forEach((cb) => cb(data));
+        return data;
+      })
+      .finally(() => {
+        inFlight = null;
+      });
   }
   return inFlight;
 }

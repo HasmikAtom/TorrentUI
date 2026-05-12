@@ -162,7 +162,7 @@ func imageHandler(store *integrations.Store, client Client) gin.HandlerFunc {
 			ct = "image/jpeg"
 		}
 		c.Header("Content-Type", ct)
-		c.Header("Cache-Control", "public, max-age=86400")
+		c.Header("Cache-Control", "private, max-age=86400")
 		c.Status(http.StatusOK)
 		_, _ = io.Copy(c.Writer, resp.Body)
 	}

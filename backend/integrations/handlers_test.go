@@ -26,7 +26,7 @@ func setupHandlerTest(t *testing.T) (*gin.Engine, *Store) {
 	store := NewStore(d)
 	r := gin.New()
 	g := r.Group("/", middleware.RequireUser())
-	RegisterHandlers(g, store, "")
+	RegisterHandlers(g, store, "", nil)
 	return r, store
 }
 
@@ -85,7 +85,7 @@ func TestPutPlex_SavesValidToken(t *testing.T) {
 	store := NewStore(d)
 	r := gin.New()
 	g := r.Group("/", middleware.RequireUser())
-	RegisterHandlers(g, store, plexServer.URL)
+	RegisterHandlers(g, store, plexServer.URL, nil)
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, authedRequest(http.MethodPut, "/integrations/plex", map[string]interface{}{
@@ -121,7 +121,7 @@ func TestPutPlex_RejectsInvalidToken(t *testing.T) {
 	store := NewStore(d)
 	r := gin.New()
 	g := r.Group("/", middleware.RequireUser())
-	RegisterHandlers(g, store, plexServer.URL)
+	RegisterHandlers(g, store, plexServer.URL, nil)
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, authedRequest(http.MethodPut, "/integrations/plex", map[string]interface{}{
