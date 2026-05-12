@@ -201,3 +201,38 @@ func TestMoviesHandler_ClampsAndValidates(t *testing.T) {
 		})
 	}
 }
+
+func TestMovieDetailHandler_ReturnsDetail(t *testing.T) {
+	fc := &fakeClient{
+		movie: MovieDetail{
+			Movie:  Movie{RatingKey: "42", Title: "Movie", Year: 2024},
+			Genres: []string{"Action"},
+		},
+	}
+	r := setupHandlers(t, fc, func(s *integrations.Store) {
+		_ = s.UpsertPlex("user-1", "tok", true)
+	})
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, authed(http.MethodGet, "/plex/movies/42"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status: got %d (body: %s)", w.Code, w.Body.String())
+	}
+	var d MovieDetail
+	_ = json.NewDecoder(w.Body).Decode(&d)
+	if d.RatingKey != "42" || d.Genres[0] != "Action" {
+		t.Errorf("body: %+v", d)
+	}
+}
+
+func TestMovieDetailHandler_NotConfigured(t *testing.T) {
+	r := setupHandlers(t, &fakeClient{}, nil)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, authed(http.MethodGet, "/plex/movies/42"))
+
+	if w.Code != http.StatusPreconditionFailed {
+		t.Fatalf("status: got %d", w.Code)
+	}
+}

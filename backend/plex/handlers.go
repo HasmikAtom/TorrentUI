@@ -33,7 +33,8 @@ const (
 
 func RegisterHandlers(g *gin.RouterGroup, store *integrations.Store, client Client) {
 	g.GET("/plex/movies", listMoviesHandler(store, client))
-	// detail + image handlers added in later tasks
+	g.GET("/plex/movies/:ratingKey", movieDetailHandler(store, client))
+	// image handler added in next task
 }
 
 // resolveUserPlex pulls the user's token + resolves their PMS connection.
@@ -100,5 +101,32 @@ func listMoviesHandler(store *integrations.Store, client Client) gin.HandlerFunc
 			res.Items = []Movie{}
 		}
 		c.JSON(http.StatusOK, res)
+	}
+}
+
+func movieDetailHandler(store *integrations.Store, client Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token, conn, ok := resolveUserPlex(c, store, client)
+		if !ok {
+			return
+		}
+
+		ratingKey := c.Param("ratingKey")
+		if ratingKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "ratingKey required"})
+			return
+		}
+
+		d, err := client.GetMovie(conn, token, ratingKey)
+		if err == ErrUnauthorized {
+			client.InvalidateServer(c.GetString("userId"))
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "plex_unauthorized"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "plex_server_unreachable"})
+			return
+		}
+		c.JSON(http.StatusOK, d)
 	}
 }
