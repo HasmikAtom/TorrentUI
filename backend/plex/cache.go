@@ -33,11 +33,11 @@ func (c *discoveryCache) get(userID string) (ServerConn, bool) {
 }
 
 func (c *discoveryCache) set(userID string, conn ServerConn) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if conn.ResolvedAt.IsZero() {
 		conn.ResolvedAt = time.Now()
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.entries[userID] = conn
 }
 
