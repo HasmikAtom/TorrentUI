@@ -236,3 +236,62 @@ func TestMovieDetailHandler_NotConfigured(t *testing.T) {
 		t.Fatalf("status: got %d", w.Code)
 	}
 }
+
+func TestImageHandler_ProxiesBytes(t *testing.T) {
+	fc := &fakeClient{
+		imageStatus: 200,
+		imageBody:   []byte{0xDE, 0xAD, 0xBE, 0xEF},
+	}
+	r := setupHandlers(t, fc, func(s *integrations.Store) {
+		_ = s.UpsertPlex("user-1", "tok", true)
+	})
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, authed(http.MethodGet, "/plex/image?path=/library/metadata/10/thumb/1"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status: got %d (body: %s)", w.Code, w.Body.String())
+	}
+	if w.Header().Get("Content-Type") != "image/jpeg" {
+		t.Errorf("content-type: got %q", w.Header().Get("Content-Type"))
+	}
+	if w.Header().Get("Cache-Control") != "public, max-age=86400" {
+		t.Errorf("cache-control: got %q", w.Header().Get("Cache-Control"))
+	}
+	if fc.lastImagePath != "/library/metadata/10/thumb/1" {
+		t.Errorf("path passed to client: got %q", fc.lastImagePath)
+	}
+	if len(w.Body.Bytes()) != 4 {
+		t.Errorf("body bytes: got %d, want 4", len(w.Body.Bytes()))
+	}
+}
+
+func TestImageHandler_RejectsBadPath(t *testing.T) {
+	r := setupHandlers(t, &fakeClient{}, func(s *integrations.Store) {
+		_ = s.UpsertPlex("user-1", "tok", true)
+	})
+
+	cases := []string{
+		"",
+		"/etc/passwd",
+		"http://evil.example/x",
+		"//evil.example/x",
+		"library/metadata/10/thumb/1",
+	}
+	for _, p := range cases {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, authed(http.MethodGet, "/plex/image?path="+p))
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("path %q: got %d, want 400", p, w.Code)
+		}
+	}
+}
+
+func TestImageHandler_NotConfigured(t *testing.T) {
+	r := setupHandlers(t, &fakeClient{}, nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, authed(http.MethodGet, "/plex/image?path=/library/metadata/10/thumb/1"))
+	if w.Code != http.StatusPreconditionFailed {
+		t.Fatalf("status: got %d", w.Code)
+	}
+}

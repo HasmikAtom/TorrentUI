@@ -1,6 +1,7 @@
 package plex
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ const (
 func RegisterHandlers(g *gin.RouterGroup, store *integrations.Store, client Client) {
 	g.GET("/plex/movies", listMoviesHandler(store, client))
 	g.GET("/plex/movies/:ratingKey", movieDetailHandler(store, client))
-	// image handler added in next task
+	g.GET("/plex/image", imageHandler(store, client))
 }
 
 // resolveUserPlex pulls the user's token + resolves their PMS connection.
@@ -128,5 +129,41 @@ func movieDetailHandler(store *integrations.Store, client Client) gin.HandlerFun
 			return
 		}
 		c.JSON(http.StatusOK, d)
+	}
+}
+
+func imageHandler(store *integrations.Store, client Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		path := c.Query("path")
+		if !strings.HasPrefix(path, "/library/metadata/") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid path"})
+			return
+		}
+
+		token, conn, ok := resolveUserPlex(c, store, client)
+		if !ok {
+			return
+		}
+
+		resp, err := client.FetchImage(conn, token, path)
+		if err == ErrUnauthorized {
+			client.InvalidateServer(c.GetString("userId"))
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "plex_unauthorized"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "plex_server_unreachable"})
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "image/jpeg"
+		}
+		c.Header("Content-Type", ct)
+		c.Header("Cache-Control", "public, max-age=86400")
+		c.Status(http.StatusOK)
+		_, _ = io.Copy(c.Writer, resp.Body)
 	}
 }
