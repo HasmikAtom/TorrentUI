@@ -321,3 +321,50 @@ func TestGetMovie_NotFound(t *testing.T) {
 		t.Fatalf("got %v, want ErrServerUnreachable", err)
 	}
 }
+
+func TestFetchImage_StreamsBytes(t *testing.T) {
+	pms := fakePMS(t, map[string]func(w http.ResponseWriter, r *http.Request){
+		"/library/metadata/10/thumb/1": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("X-Plex-Token") != "tok" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.Header().Set("Content-Type", "image/jpeg")
+			_, _ = w.Write([]byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10})
+		},
+	})
+	defer pms.Close()
+
+	client := newClient(http.DefaultClient)
+	conn := ServerConn{BaseURL: pms.URL, ResolvedAt: time.Now()}
+
+	resp, err := client.FetchImage(conn, "tok", "/library/metadata/10/thumb/1")
+	if err != nil {
+		t.Fatalf("FetchImage: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("status: got %d", resp.StatusCode)
+	}
+	if resp.Header.Get("Content-Type") != "image/jpeg" {
+		t.Errorf("content-type: got %q", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestFetchImage_Unauthorized(t *testing.T) {
+	pms := fakePMS(t, map[string]func(w http.ResponseWriter, r *http.Request){
+		"/library/metadata/10/thumb/1": func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		},
+	})
+	defer pms.Close()
+
+	client := newClient(http.DefaultClient)
+	conn := ServerConn{BaseURL: pms.URL, ResolvedAt: time.Now()}
+
+	_, err := client.FetchImage(conn, "tok", "/library/metadata/10/thumb/1")
+	if err != ErrUnauthorized {
+		t.Fatalf("got %v, want ErrUnauthorized", err)
+	}
+}

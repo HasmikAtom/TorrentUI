@@ -290,6 +290,33 @@ func tagsOf(in []taggedEntry) []string {
 	return out
 }
 
+// FetchImage returns an open HTTP response streaming the image bytes.
+// Caller MUST close resp.Body.
+func (c *PlexClient) FetchImage(conn ServerConn, token, path string) (*http.Response, error) {
+	endpoint := conn.BaseURL + path
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build image request: %w", err)
+	}
+	req.Header.Set("X-Plex-Token", token)
+	req.Header.Set("X-Plex-Client-Identifier", clientIdentifier)
+	req.Header.Set("X-Plex-Product", clientProduct)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, ErrServerUnreachable
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		resp.Body.Close()
+		return nil, ErrUnauthorized
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		resp.Body.Close()
+		return nil, ErrServerUnreachable
+	}
+	return resp, nil
+}
+
 func toMovie(m metadataEntry) Movie {
 	return Movie{
 		RatingKey:      m.RatingKey,
