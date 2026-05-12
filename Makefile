@@ -1,4 +1,4 @@
-.PHONY: dev dev-build dev-down dev-logs dev-restart prod prod-build prod-down prod-logs prod-restart clean-dev clean-prod deploy-up deploy-build deploy-down deploy-logs auth-dev auth-shell-db
+.PHONY: dev dev-build dev-down dev-logs dev-restart prod prod-build prod-down prod-logs prod-restart prod-pull-deploy clean-dev clean-prod deploy-up deploy-build deploy-down deploy-logs auth-dev auth-shell-db
 
 # Development
 dev:
@@ -34,6 +34,11 @@ prod-logs:
 
 prod-restart:
 	docker compose -p torrent-prod -f docker-compose.yml restart
+
+prod-pull-deploy:
+	git fetch origin
+	git pull --ff-only
+	$(MAKE) prod-build-deploy
 
 # Deploy webhook
 deploy-up:
