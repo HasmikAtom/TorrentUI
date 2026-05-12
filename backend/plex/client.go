@@ -1,0 +1,200 @@
+package plex
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"time"
+)
+
+const (
+	clientIdentifier = "torrent-ui"
+	clientProduct    = "TorrentUI"
+)
+
+type PlexClient struct {
+	httpClient *http.Client
+	discoverer *discoverer
+}
+
+func newClient(httpClient *http.Client) *PlexClient {
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 15 * time.Second}
+	}
+	return &PlexClient{httpClient: httpClient}
+}
+
+// New constructs a fully-wired client with cached discovery.
+func New(httpClient *http.Client) *PlexClient {
+	c := newClient(httpClient)
+	c.discoverer = newDiscoverer("", httpClient, newDiscoveryCache(5*time.Minute))
+	return c
+}
+
+// ResolveServer returns the user's PMS connection. Used by handlers.
+func (c *PlexClient) ResolveServer(userID, token string) (ServerConn, error) {
+	if c.discoverer == nil {
+		return ServerConn{}, ErrServerUnreachable
+	}
+	return c.discoverer.resolve(userID, token)
+}
+
+// InvalidateServer drops the cached PMS for a user (e.g. on 401).
+func (c *PlexClient) InvalidateServer(userID string) {
+	if c.discoverer != nil {
+		c.discoverer.cache.invalidate(userID)
+	}
+}
+
+type mediaContainer struct {
+	Size      int             `json:"size"`
+	TotalSize int             `json:"totalSize"`
+	Offset    int             `json:"offset"`
+	Directory []sectionEntry  `json:"Directory"`
+	Metadata  []metadataEntry `json:"Metadata"`
+}
+
+type sectionsResponse struct {
+	MediaContainer mediaContainer `json:"MediaContainer"`
+}
+
+type sectionEntry struct {
+	Key   string `json:"key"`
+	Type  string `json:"type"`
+	Title string `json:"title"`
+}
+
+type metadataEntry struct {
+	RatingKey      string        `json:"ratingKey"`
+	Title          string        `json:"title"`
+	Year           int           `json:"year"`
+	Thumb          string        `json:"thumb"`
+	Art            string        `json:"art"`
+	Rating         float64       `json:"rating"`
+	AudienceRating float64       `json:"audienceRating"`
+	Duration       int64         `json:"duration"`
+	AddedAt        int64         `json:"addedAt"`
+	Summary        string        `json:"summary"`
+	ContentRating  string        `json:"contentRating"`
+	Studio         string        `json:"studio"`
+	OriginallyAt   string        `json:"originallyAvailableAt"`
+	Genre          []taggedEntry `json:"Genre"`
+	Director       []taggedEntry `json:"Director"`
+	Writer         []taggedEntry `json:"Writer"`
+	Role           []taggedEntry `json:"Role"`
+}
+
+type taggedEntry struct {
+	Tag string `json:"tag"`
+}
+
+// ListMovies queries movie libraries on the user's PMS. v1: paginates within
+// the first movie library; if exhausted, advances to the next library.
+func (c *PlexClient) ListMovies(conn ServerConn, token string, start, size int, sort string) (ListMoviesResult, error) {
+	libs, err := c.listMovieLibraries(conn, token)
+	if err != nil {
+		return ListMoviesResult{}, err
+	}
+	if len(libs) == 0 {
+		return ListMoviesResult{Items: []Movie{}, Total: 0, Start: start, Size: 0}, nil
+	}
+
+	// Single library: just query it.
+	if len(libs) == 1 {
+		return c.queryLibraryPage(conn, token, libs[0].Key, start, size, sort)
+	}
+	return c.queryAcrossLibraries(conn, token, libs, start, size, sort)
+}
+
+func (c *PlexClient) listMovieLibraries(conn ServerConn, token string) ([]sectionEntry, error) {
+	var resp sectionsResponse
+	if err := c.getJSON(conn.BaseURL+"/library/sections", token, nil, &resp); err != nil {
+		return nil, err
+	}
+	out := []sectionEntry{}
+	for _, d := range resp.MediaContainer.Directory {
+		if d.Type == "movie" {
+			out = append(out, d)
+		}
+	}
+	return out, nil
+}
+
+func (c *PlexClient) queryLibraryPage(conn ServerConn, token, libKey string, start, size int, sort string) (ListMoviesResult, error) {
+	q := url.Values{}
+	q.Set("type", "1")
+	q.Set("X-Plex-Container-Start", strconv.Itoa(start))
+	q.Set("X-Plex-Container-Size", strconv.Itoa(size))
+	q.Set("sort", sort)
+
+	var resp sectionsResponse
+	endpoint := fmt.Sprintf("%s/library/sections/%s/all", conn.BaseURL, libKey)
+	if err := c.getJSON(endpoint, token, q, &resp); err != nil {
+		return ListMoviesResult{}, err
+	}
+	items := make([]Movie, 0, len(resp.MediaContainer.Metadata))
+	for _, m := range resp.MediaContainer.Metadata {
+		items = append(items, toMovie(m))
+	}
+	return ListMoviesResult{
+		Items: items,
+		Total: resp.MediaContainer.TotalSize,
+		Start: start,
+		Size:  len(items),
+	}, nil
+}
+
+// queryAcrossLibraries is implemented in Task 5.
+func (c *PlexClient) queryAcrossLibraries(conn ServerConn, token string, libs []sectionEntry, start, size int, sort string) (ListMoviesResult, error) {
+	return ListMoviesResult{}, fmt.Errorf("multi-library not implemented yet")
+}
+
+func (c *PlexClient) getJSON(endpoint, token string, query url.Values, out interface{}) error {
+	if query != nil && len(query) > 0 {
+		endpoint = endpoint + "?" + query.Encode()
+	}
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("X-Plex-Token", token)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Plex-Client-Identifier", clientIdentifier)
+	req.Header.Set("X-Plex-Product", clientProduct)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return ErrServerUnreachable
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return ErrServerUnreachable
+	}
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return ErrServerUnreachable
+	}
+	return nil
+}
+
+func toMovie(m metadataEntry) Movie {
+	return Movie{
+		RatingKey:      m.RatingKey,
+		Title:          m.Title,
+		Year:           m.Year,
+		Thumb:          m.Thumb,
+		Art:            m.Art,
+		Rating:         m.Rating,
+		AudienceRating: m.AudienceRating,
+		Duration:       m.Duration,
+		AddedAt:        m.AddedAt,
+		Summary:        m.Summary,
+	}
+}
