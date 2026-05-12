@@ -147,9 +147,79 @@ func (c *PlexClient) queryLibraryPage(conn ServerConn, token, libKey string, sta
 	}, nil
 }
 
-// queryAcrossLibraries is implemented in Task 5.
+// queryAcrossLibraries paginates virtually across multiple movie libraries
+// by treating them as a concatenated stream in the order Plex returned them.
+// First it sums totals across libraries (one /all?size=0 request each, cheap),
+// then walks libraries until `size` items have been gathered starting at `start`.
 func (c *PlexClient) queryAcrossLibraries(conn ServerConn, token string, libs []sectionEntry, start, size int, sort string) (ListMoviesResult, error) {
-	return ListMoviesResult{}, fmt.Errorf("multi-library not implemented yet")
+	libTotals := make([]int, len(libs))
+	grandTotal := 0
+	for i, lib := range libs {
+		t, err := c.libraryTotal(conn, token, lib.Key, sort)
+		if err != nil {
+			return ListMoviesResult{}, err
+		}
+		libTotals[i] = t
+		grandTotal += t
+	}
+
+	items := make([]Movie, 0, size)
+	cursor := 0 // virtual offset across the concatenation
+	remaining := size
+
+	for i, lib := range libs {
+		libStart := cursor // virtual offset where this library begins
+		libEnd := cursor + libTotals[i]
+		cursor = libEnd
+
+		if remaining <= 0 {
+			break
+		}
+		if start >= libEnd {
+			continue
+		}
+		// Translate virtual offsets to per-library offsets.
+		localStart := 0
+		if start > libStart {
+			localStart = start - libStart
+		}
+		want := remaining
+		available := libTotals[i] - localStart
+		if want > available {
+			want = available
+		}
+		if want <= 0 {
+			continue
+		}
+		page, err := c.queryLibraryPage(conn, token, lib.Key, localStart, want, sort)
+		if err != nil {
+			return ListMoviesResult{}, err
+		}
+		items = append(items, page.Items...)
+		remaining -= len(page.Items)
+	}
+
+	return ListMoviesResult{
+		Items: items,
+		Total: grandTotal,
+		Start: start,
+		Size:  len(items),
+	}, nil
+}
+
+func (c *PlexClient) libraryTotal(conn ServerConn, token, libKey, sort string) (int, error) {
+	q := url.Values{}
+	q.Set("type", "1")
+	q.Set("X-Plex-Container-Start", "0")
+	q.Set("X-Plex-Container-Size", "0")
+	q.Set("sort", sort)
+
+	var resp sectionsResponse
+	endpoint := fmt.Sprintf("%s/library/sections/%s/all", conn.BaseURL, libKey)
+	if err := c.getJSON(endpoint, token, q, &resp); err != nil {
+		return 0, err
+	}
+	return resp.MediaContainer.TotalSize, nil
 }
 
 func (c *PlexClient) getJSON(endpoint, token string, query url.Values, out interface{}) error {

@@ -138,3 +138,108 @@ func TestListMovies_NoMovieLibrary_EmptyResult(t *testing.T) {
 // moviesPage2Fixture is consumed by tests added in Task 5; keep it defined here
 // so the multi-library tests can reference it without restating fixture data.
 var _ = moviesPage2Fixture
+
+const sectionsTwoMovieLibsFixture = `{
+  "MediaContainer": {
+    "Directory": [
+      {"key": "1", "type": "movie", "title": "Movies"},
+      {"key": "2", "type": "movie", "title": "Anime"}
+    ]
+  }
+}`
+
+// Library 1 has 3 items (offsets 0,1,2). Library 2 has 2 items (offsets 0,1).
+// Page with start=2, size=2 should pull last item of lib 1 + first item of lib 2.
+
+func TestListMovies_MultiLibrary_PageSpansBoundary(t *testing.T) {
+	pms := fakePMS(t, map[string]func(w http.ResponseWriter, r *http.Request){
+		"/library/sections": func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(sectionsTwoMovieLibsFixture))
+		},
+		"/library/sections/1/all": func(w http.ResponseWriter, r *http.Request) {
+			start := r.URL.Query().Get("X-Plex-Container-Start")
+			size := r.URL.Query().Get("X-Plex-Container-Size")
+			w.Header().Set("Content-Type", "application/json")
+			// caller requests within lib 1: start=2, size=1 => returns item 102
+			if start == "2" && size == "1" {
+				_, _ = w.Write([]byte(`{"MediaContainer":{"size":1,"totalSize":3,"offset":2,"Metadata":[{"ratingKey":"102","title":"L1-C","year":2020,"addedAt":3}]}}`))
+				return
+			}
+			// totals query: start=0 size=0
+			if start == "0" && size == "0" {
+				_, _ = w.Write([]byte(`{"MediaContainer":{"size":0,"totalSize":3,"offset":0,"Metadata":[]}}`))
+				return
+			}
+			t.Errorf("unexpected lib 1 query start=%s size=%s", start, size)
+			w.WriteHeader(http.StatusInternalServerError)
+		},
+		"/library/sections/2/all": func(w http.ResponseWriter, r *http.Request) {
+			start := r.URL.Query().Get("X-Plex-Container-Start")
+			size := r.URL.Query().Get("X-Plex-Container-Size")
+			w.Header().Set("Content-Type", "application/json")
+			// caller fills remaining 1 item from lib 2: start=0, size=1 => returns item 200
+			if start == "0" && size == "1" {
+				_, _ = w.Write([]byte(`{"MediaContainer":{"size":1,"totalSize":2,"offset":0,"Metadata":[{"ratingKey":"200","title":"L2-A","year":2021,"addedAt":10}]}}`))
+				return
+			}
+			// totals query: start=0 size=0
+			if start == "0" && size == "0" {
+				_, _ = w.Write([]byte(`{"MediaContainer":{"size":0,"totalSize":2,"offset":0,"Metadata":[]}}`))
+				return
+			}
+			t.Errorf("unexpected lib 2 query start=%s size=%s", start, size)
+			w.WriteHeader(http.StatusInternalServerError)
+		},
+	})
+	defer pms.Close()
+
+	client := newClient(http.DefaultClient)
+	conn := ServerConn{BaseURL: pms.URL, ResolvedAt: time.Now()}
+
+	res, err := client.ListMovies(conn, "tok", 2, 2, "addedAt:desc")
+	if err != nil {
+		t.Fatalf("ListMovies: %v", err)
+	}
+	if res.Total != 5 {
+		t.Errorf("total: got %d, want 5 (3+2)", res.Total)
+	}
+	if len(res.Items) != 2 {
+		t.Fatalf("items: got %d, want 2", len(res.Items))
+	}
+	if res.Items[0].RatingKey != "102" || res.Items[1].RatingKey != "200" {
+		t.Errorf("items: got [%s, %s], want [102, 200]", res.Items[0].RatingKey, res.Items[1].RatingKey)
+	}
+}
+
+func TestListMovies_MultiLibrary_PastEnd(t *testing.T) {
+	pms := fakePMS(t, map[string]func(w http.ResponseWriter, r *http.Request){
+		"/library/sections": func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(sectionsTwoMovieLibsFixture))
+		},
+		"/library/sections/1/all": func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"MediaContainer":{"size":0,"totalSize":3,"offset":0,"Metadata":[]}}`))
+		},
+		"/library/sections/2/all": func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"MediaContainer":{"size":0,"totalSize":2,"offset":0,"Metadata":[]}}`))
+		},
+	})
+	defer pms.Close()
+
+	client := newClient(http.DefaultClient)
+	conn := ServerConn{BaseURL: pms.URL, ResolvedAt: time.Now()}
+
+	res, err := client.ListMovies(conn, "tok", 10, 5, "addedAt:desc")
+	if err != nil {
+		t.Fatalf("ListMovies: %v", err)
+	}
+	if res.Total != 5 {
+		t.Errorf("total: got %d, want 5", res.Total)
+	}
+	if len(res.Items) != 0 {
+		t.Errorf("items: got %d, want 0", len(res.Items))
+	}
+}
